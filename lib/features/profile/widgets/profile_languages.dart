@@ -8,7 +8,10 @@
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 class ProfileLanguages extends StatelessWidget {
   const ProfileLanguages({super.key});
@@ -25,7 +28,7 @@ class ProfileLanguages extends StatelessWidget {
         padding: const EdgeInsets.all(16),
 
         decoration: BoxDecoration(
-          color: colors.cardTertiary, // 🔥 mesmo padrão que você definiu
+          color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
 
@@ -39,12 +42,28 @@ class ProfileLanguages extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Idiomas',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+                // -------------------------------------------------
+                // TITLE + ICON
+                // -------------------------------------------------
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.language,
+                      width: 18,
+                      height: 18,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Text(
+                      'Idiomas',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 IconButton(
@@ -121,7 +140,7 @@ class _LanguageChip extends StatelessWidget {
       ),
 
       decoration: BoxDecoration(
-        color: colors.cardSecondary, // 🔥 leve contraste
+        color: colors.cardSecondary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.white.withOpacity(0.05),

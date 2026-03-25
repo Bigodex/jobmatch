@@ -2,15 +2,13 @@
 // PROFILE SOFT SKILLS
 // -------------------------------------------------------
 // Card de habilidades comportamentais
-//
-// Estrutura:
-// - Header (título + editar)
-// - Lista de habilidades
-// - Dividers entre itens
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 class ProfileSoftSkills extends StatelessWidget {
   const ProfileSoftSkills({super.key});
@@ -27,7 +25,7 @@ class ProfileSoftSkills extends StatelessWidget {
         padding: const EdgeInsets.all(16),
 
         decoration: BoxDecoration(
-          color: colors.cardTertiary, // 🔥 padrão
+          color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
 
@@ -41,12 +39,28 @@ class ProfileSoftSkills extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Habilidades Comportamentais',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+                // -------------------------------------------------
+                // TITLE + ICON
+                // -------------------------------------------------
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.softskills,
+                      width: 18,
+                      height: 18,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Text(
+                      'Habilidades Comportamentais',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 IconButton(
@@ -93,8 +107,6 @@ class ProfileSoftSkills extends StatelessWidget {
 
 // =======================================================
 // SKILL ITEM
-// -------------------------------------------------------
-// Item individual de habilidade
 // =======================================================
 
 class _SkillItem extends StatelessWidget {
@@ -108,27 +120,50 @@ class _SkillItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
 
-        // TÍTULO
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+        // -------------------------------------------------
+        // ICON
+        // -------------------------------------------------
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: SvgPicture.asset(
+            AppIcons.softskillsitem,
+            width: 16,
+            height: 16,
           ),
         ),
 
-        const SizedBox(height: 6),
+        const SizedBox(width: 10),
 
-        // DESCRIÇÃO
-        Text(
-          description,
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.white.withOpacity(0.6),
+        // -------------------------------------------------
+        // TEXT
+        // -------------------------------------------------
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+              ),
+            ],
           ),
         ),
       ],

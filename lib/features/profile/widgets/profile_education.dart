@@ -2,15 +2,13 @@
 // PROFILE EDUCATION
 // -------------------------------------------------------
 // Card de formações acadêmicas
-//
-// Estrutura:
-// - Header
-// - Lista (normalmente pequena)
-// - Timeline simples
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 class ProfileEducation extends StatelessWidget {
   const ProfileEducation({super.key});
@@ -41,12 +39,28 @@ class ProfileEducation extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Formações',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+                // -------------------------------------------------
+                // TITLE + ICON
+                // -------------------------------------------------
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.cap,
+                      width: 18,
+                      height: 18,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Text(
+                      'Formações',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 IconButton(
@@ -124,7 +138,7 @@ class _EducationItem extends StatelessWidget {
             Container(
               width: 2,
               height: 70,
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white
             ),
           ],
         ),

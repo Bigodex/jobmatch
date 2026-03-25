@@ -24,6 +24,18 @@ class AppIcons {
   static const String group = '${_base}group.svg';
   static const String house = '${_base}house.svg';
   static const String pencil = '${_base}pencil.svg';
+  static const String building = '${_base}building.svg';
+  static const String cake = '${_base}cake.svg';
+  static const String code = '${_base}code.svg';
+  static const String cv = '${_base}cv.svg';
+  static const String info = '${_base}info.svg';
+  static const String language = '${_base}language.svg';
+  static const String softskills = '${_base}soft_skills.svg';
+  static const String softskillsitem = '${_base}soft_skills_item.svg';
+  static const String laptop = '${_base}laptop.svg';
+  static const String briefcase = '${_base}briefcase.svg';
+  static const String cap = '${_base}briefcase.svg';
+
 
   // ===================================================
   // IMAGES

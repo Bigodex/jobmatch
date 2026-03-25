@@ -2,15 +2,13 @@
 // PROFILE EXPERIENCE
 // -------------------------------------------------------
 // Card de experiências profissionais
-//
-// Estrutura:
-// - Header
-// - Lista de experiências
-// - Timeline vertical
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 class ProfileExperience extends StatelessWidget {
   const ProfileExperience({super.key});
@@ -41,12 +39,28 @@ class ProfileExperience extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Experiência',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+                // -------------------------------------------------
+                // TITLE + ICON
+                // -------------------------------------------------
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.briefcase,
+                      width: 18,
+                      height: 18,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Text(
+                      'Experiência',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 IconButton(
@@ -140,7 +154,7 @@ class _ExperienceItem extends StatelessWidget {
             Container(
               width: 2,
               height: 140,
-              color: Colors.white
+              color: Colors.white,
             ),
           ],
         ),

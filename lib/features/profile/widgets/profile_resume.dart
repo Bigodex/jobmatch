@@ -5,7 +5,10 @@
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 class ProfileResume extends StatelessWidget {
   const ProfileResume({super.key});
@@ -26,7 +29,7 @@ class ProfileResume extends StatelessWidget {
         padding: const EdgeInsets.all(16),
 
         decoration: BoxDecoration(
-          color: colors.cardTertiary, // 🔥 AGORA FUNCIONA
+          color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
 
@@ -40,12 +43,28 @@ class ProfileResume extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Resumo Profissional',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+
+                // -------------------------------------------------
+                // TITLE + ICON
+                // -------------------------------------------------
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      AppIcons.cv,
+                      width: 18,
+                      height: 18,
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    const Text(
+                      'Resumo Profissional',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 IconButton(
@@ -63,13 +82,15 @@ class ProfileResume extends StatelessWidget {
             // INFO
             // ===================================================
             const _InfoItem(
+              icon: AppIcons.cake,
               title: 'Data de Nascimento',
-              value: '15/12/2005 | 18 Anos',
+              value: '23/10/1996 | 29 Anos',
             ),
 
             const SizedBox(height: 12),
 
             const _InfoItem(
+              icon: AppIcons.building,
               title: 'Cidade',
               value: 'Brasil - Pato Branco PR',
             ),
@@ -77,6 +98,7 @@ class ProfileResume extends StatelessWidget {
             const SizedBox(height: 12),
 
             const _InfoItem(
+              icon: AppIcons.info,
               title: 'Descrição',
               value:
                   'Profissional de UI/UX com 5 anos de experiência em design centrado no usuário, com atuação em startups e grandes empresas.',
@@ -93,34 +115,62 @@ class ProfileResume extends StatelessWidget {
 // =======================================================
 
 class _InfoItem extends StatelessWidget {
+  final String icon;
   final String title;
   final String value;
 
   const _InfoItem({
+    required this.icon,
     required this.title,
     required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
 
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.6),
+        // -------------------------------------------------
+        // ICON
+        // -------------------------------------------------
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: SvgPicture.asset(
+            icon,
+            width: 16,
+            height: 16,
           ),
         ),
 
-        const SizedBox(height: 4),
+        const SizedBox(width: 10),
 
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
+        // -------------------------------------------------
+        // TEXT
+        // -------------------------------------------------
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
         ),
       ],

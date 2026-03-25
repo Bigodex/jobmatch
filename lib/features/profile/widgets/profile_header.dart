@@ -64,7 +64,7 @@ class ProfileHeader extends StatelessWidget {
               Expanded(
                 child: _ProfileStat(
                   iconPath: AppIcons.group, // 🔥 SVG
-                  label: '1000',
+                  label: '1.000',
                 ),
               ),
               SizedBox(width: 12),
