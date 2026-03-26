@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 
 class AppCover extends StatelessWidget {
-  const AppCover({super.key});
+  const AppCover({super.key, required String imageUrl});
 
   @override
   Widget build(BuildContext context) {

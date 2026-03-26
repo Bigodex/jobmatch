@@ -2,16 +2,29 @@
 // PROFILE EXPERIENCE
 // -------------------------------------------------------
 // Card de experiências profissionais
+// Ajustado para manter:
+// - empresa
+// - período
+// - cargo
+// - descrição
+// - timeline visual mais próxima do layout original
 // =======================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
+import 'package:jobmatch/features/profile/models/experience_model.dart';
 
 class ProfileExperience extends StatelessWidget {
-  const ProfileExperience({super.key});
+  final List<ExperienceModel> experiences;
+
+  const ProfileExperience({
+    super.key,
+    required this.experiences,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,29 +33,21 @@ class ProfileExperience extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Container(
         padding: const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ===================================================
             // HEADER
             // ===================================================
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                // -------------------------------------------------
-                // TITLE + ICON
-                // -------------------------------------------------
                 Row(
                   children: [
                     SvgPicture.asset(
@@ -50,9 +55,7 @@ class ProfileExperience extends StatelessWidget {
                       width: 18,
                       height: 18,
                     ),
-
                     const SizedBox(width: 8),
-
                     const Text(
                       'Experiência',
                       style: TextStyle(
@@ -62,7 +65,6 @@ class ProfileExperience extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 IconButton(
                   onPressed: () {},
                   icon: const Icon(Icons.edit, size: 18),
@@ -71,37 +73,102 @@ class ProfileExperience extends StatelessWidget {
             ),
 
             const Divider(),
-
             const SizedBox(height: 8),
 
             // ===================================================
-            // EXPERIÊNCIAS
+            // LISTA DINÂMICA
             // ===================================================
-            const _ExperienceItem(
-              company: 'Agende tecnologias LTDA',
-              period: '1 ano - Até o momento',
-              role: 'Analista',
-              description:
-                  'Analista com experiência em análise de dados e otimização de processos. Habilidade em ferramentas como [principais ferramentas] e foco em soluções estratégicas que gerem impacto positivo.',
-              logoColor: Colors.grey,
-              isFirst: true,
-            ),
+            Column(
+              children: experiences.asMap().entries.map((entry) {
+                final index = entry.key;
+                final experience = entry.value;
+                final isLast = index == experiences.length - 1;
 
-            const SizedBox(height: 24),
-
-            const _ExperienceItem(
-              company: 'IDS - SOFTWARE',
-              period: '12/02/2024 - 12/05/2024 - 7 Meses',
-              role: 'UI/UX Designer',
-              description:
-                  'Aprendi a criar interfaces intuitivas, protótipos interativos e aplicar testes de usabilidade. Desenvolvi habilidades em ferramentas como Figma e aprimorei a capacidade de resolver problemas com foco no usuário.',
-              logoColor: Colors.blue,
-              isFirst: false,
+                return Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+                  child: _ExperienceItem(
+                    company: experience.company,
+                    period: _formatPeriod(
+                      experience.startDate,
+                      experience.endDate,
+                    ),
+                    role: experience.role,
+                    description: experience.description,
+                    logoColor: _getLogoColor(experience.company),
+                    logoText: _getLogoText(experience.company),
+                    showLine: !isLast,
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // =======================================================
+  // FORMATA PERÍODO
+  // =======================================================
+
+  String _formatPeriod(DateTime startDate, DateTime? endDate) {
+    final startFormatted = DateFormat('dd/MM/yyyy').format(startDate);
+
+    if (endDate == null) {
+      final months = _monthDifference(startDate, DateTime.now());
+      final periodText = months >= 12
+          ? '${(months / 12).floor()} ano${(months / 12).floor() > 1 ? 's' : ''}'
+          : '$months mes${months > 1 ? 'es' : ''}';
+
+      return '$periodText - Até o momento';
+    }
+
+    final endFormatted = DateFormat('dd/MM/yyyy').format(endDate);
+    final months = _monthDifference(startDate, endDate);
+
+    return '$startFormatted - $endFormatted - $months Meses';
+  }
+
+  int _monthDifference(DateTime start, DateTime end) {
+    int months = (end.year - start.year) * 12 + (end.month - start.month);
+    if (end.day < start.day) {
+      months--;
+    }
+    return months <= 0 ? 1 : months;
+  }
+
+  // =======================================================
+  // MOCK VISUAL DE LOGO/COR
+  // -------------------------------------------------------
+  // Enquanto seu model não tiver logoUrl / brandColor
+  // =======================================================
+
+  Color _getLogoColor(String company) {
+    final normalized = company.toLowerCase();
+
+    if (normalized.contains('ids')) {
+      return const Color(0xFF0D5BD7);
+    }
+
+    if (normalized.contains('agende')) {
+      return const Color(0xFF5C5C5C);
+    }
+
+    return const Color(0xFF3A3A3A);
+  }
+
+  String _getLogoText(String company) {
+    final normalized = company.toLowerCase();
+
+    if (normalized.contains('ids')) {
+      return 'ids';
+    }
+
+    if (normalized.contains('agende')) {
+      return 'a';
+    }
+
+    return company.isNotEmpty ? company[0].toUpperCase() : '?';
   }
 }
 
@@ -115,7 +182,8 @@ class _ExperienceItem extends StatelessWidget {
   final String role;
   final String description;
   final Color logoColor;
-  final bool isFirst;
+  final String logoText;
+  final bool showLine;
 
   const _ExperienceItem({
     required this.company,
@@ -123,7 +191,8 @@ class _ExperienceItem extends StatelessWidget {
     required this.role,
     required this.description,
     required this.logoColor,
-    required this.isFirst,
+    required this.logoText,
+    required this.showLine,
   });
 
   @override
@@ -131,32 +200,41 @@ class _ExperienceItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         // ===================================================
         // COLUNA ESQUERDA (LOGO + TIMELINE)
         // ===================================================
-        Column(
-          children: [
-
-            // LOGO
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: logoColor,
-                borderRadius: BorderRadius.circular(8),
+        SizedBox(
+          width: 44,
+          child: Column(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: logoColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  logoText,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
 
-            // LINHA
-            Container(
-              width: 2,
-              height: 140,
-              color: Colors.white,
-            ),
-          ],
+              if (showLine)
+                Container(
+                  width: 2,
+                  height: 126,
+                  color: Colors.white.withOpacity(0.18),
+                ),
+            ],
+          ),
         ),
 
         const SizedBox(width: 12),
@@ -168,7 +246,6 @@ class _ExperienceItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // EMPRESA
               Text(
                 company,
@@ -178,7 +255,7 @@ class _ExperienceItem extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
 
               // PERÍODO
               Text(
@@ -189,7 +266,7 @@ class _ExperienceItem extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
               // CARGO
               Text(
@@ -207,6 +284,7 @@ class _ExperienceItem extends StatelessWidget {
                 description,
                 style: TextStyle(
                   fontSize: 13,
+                  height: 1.35,
                   color: Colors.white.withOpacity(0.6),
                 ),
               ),

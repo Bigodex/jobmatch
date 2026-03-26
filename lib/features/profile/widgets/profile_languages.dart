@@ -1,10 +1,7 @@
 // =======================================================
 // PROFILE LANGUAGES
 // -------------------------------------------------------
-// Card de idiomas do usuário
-//
-// Segue o mesmo padrão do ProfileResume,
-// mas com exibição em formato de chips.
+// Agora conectado ao LanguageModel (dados dinâmicos)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -12,9 +9,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
+import 'package:jobmatch/features/profile/models/language_model.dart';
 
 class ProfileLanguages extends StatelessWidget {
-  const ProfileLanguages({super.key});
+  final List<LanguageModel> languages;
+
+  const ProfileLanguages({
+    super.key,
+    required this.languages,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,15 +26,12 @@ class ProfileLanguages extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Container(
         padding: const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -42,10 +42,6 @@ class ProfileLanguages extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                // -------------------------------------------------
-                // TITLE + ICON
-                // -------------------------------------------------
                 Row(
                   children: [
                     SvgPicture.asset(
@@ -53,9 +49,7 @@ class ProfileLanguages extends StatelessWidget {
                       width: 18,
                       height: 18,
                     ),
-
                     const SizedBox(width: 8),
-
                     const Text(
                       'Idiomas',
                       style: TextStyle(
@@ -74,35 +68,23 @@ class ProfileLanguages extends StatelessWidget {
             ),
 
             const Divider(),
-
             const SizedBox(height: 12),
 
             // ===================================================
-            // LISTA DE IDIOMAS
+            // LISTA DINÂMICA
             // ===================================================
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: const [
-
-                _LanguageChip(
-                  flag: '🇧🇷',
-                  label: 'Português',
-                  level: '100%',
-                ),
-
-                _LanguageChip(
-                  flag: '🇩🇪',
-                  label: 'Alemão',
-                  level: '10%',
-                ),
-
-                _LanguageChip(
-                  flag: '🇺🇸',
-                  label: 'Inglês',
-                  level: '30%',
-                ),
-              ],
+              children: languages
+                  .map(
+                    (lang) => _LanguageChip(
+                      flag: lang.flag,
+                      label: lang.name,
+                      level: '${lang.level}%',
+                    ),
+                  )
+                  .toList(),
             ),
           ],
         ),
@@ -113,8 +95,6 @@ class ProfileLanguages extends StatelessWidget {
 
 // =======================================================
 // LANGUAGE CHIP
-// -------------------------------------------------------
-// Item individual de idioma
 // =======================================================
 
 class _LanguageChip extends StatelessWidget {
@@ -138,7 +118,6 @@ class _LanguageChip extends StatelessWidget {
         horizontal: 14,
         vertical: 10,
       ),
-
       decoration: BoxDecoration(
         color: colors.cardSecondary,
         borderRadius: BorderRadius.circular(12),
@@ -146,14 +125,11 @@ class _LanguageChip extends StatelessWidget {
           color: Colors.white.withOpacity(0.05),
         ),
       ),
-
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
 
-          // ===================================================
           // BANDEIRA
-          // ===================================================
           Text(
             flag,
             style: const TextStyle(fontSize: 18),
@@ -161,14 +137,10 @@ class _LanguageChip extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // ===================================================
           // TEXTO
-          // ===================================================
           Text(
             '$label | $level',
-            style: const TextStyle(
-              fontSize: 14,
-            ),
+            style: const TextStyle(fontSize: 14),
           ),
         ],
       ),

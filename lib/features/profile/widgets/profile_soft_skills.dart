@@ -1,7 +1,7 @@
 // =======================================================
 // PROFILE SOFT SKILLS
 // -------------------------------------------------------
-// Card de habilidades comportamentais
+// Agora conectado ao SoftSkillModel (dados dinâmicos)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -9,9 +9,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
+import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 
 class ProfileSoftSkills extends StatelessWidget {
-  const ProfileSoftSkills({super.key});
+  final List<SoftSkillModel> skills;
+
+  const ProfileSoftSkills({
+    super.key,
+    required this.skills,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +26,12 @@ class ProfileSoftSkills extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Container(
         padding: const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -39,10 +42,6 @@ class ProfileSoftSkills extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                // -------------------------------------------------
-                // TITLE + ICON
-                // -------------------------------------------------
                 Row(
                   children: [
                     SvgPicture.asset(
@@ -50,9 +49,7 @@ class ProfileSoftSkills extends StatelessWidget {
                       width: 18,
                       height: 18,
                     ),
-
                     const SizedBox(width: 8),
-
                     const Text(
                       'Habilidades Comportamentais',
                       style: TextStyle(
@@ -71,32 +68,33 @@ class ProfileSoftSkills extends StatelessWidget {
             ),
 
             const Divider(),
-
             const SizedBox(height: 8),
 
             // ===================================================
-            // LISTA
+            // LISTA DINÂMICA
             // ===================================================
-            const _SkillItem(
-              title: 'Comunicação Eficaz',
-              description:
-                  'Capacidade de transmitir ideias de forma clara e objetiva, seja em reuniões com o time, apresentações de projetos ou documentações técnicas.',
-            ),
+            Column(
+              children: skills
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                    final index = entry.key;
+                    final skill = entry.value;
 
-            const Divider(height: 24),
+                    return Column(
+                      children: [
+                        _SkillItem(
+                          title: skill.title,
+                          description: skill.description,
+                        ),
 
-            const _SkillItem(
-              title: 'Trabalho em Equipe',
-              description:
-                  'Habilidade para colaborar com outros desenvolvedores, designers e gerentes de projeto, promovendo um ambiente produtivo e alinhado com os objetivos do time.',
-            ),
-
-            const Divider(height: 24),
-
-            const _SkillItem(
-              title: 'Aprendizado Contínuo',
-              description:
-                  'Habilidade para colaborar com outros desenvolvedores, designers e gerentes de projeto, promovendo um ambiente produtivo e alinhado com os objetivos do time.',
+                        // Divider entre itens (menos no último)
+                        if (index != skills.length - 1)
+                          const Divider(height: 24),
+                      ],
+                    );
+                  })
+                  .toList(),
             ),
           ],
         ),
@@ -124,9 +122,6 @@ class _SkillItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
 
-        // -------------------------------------------------
-        // ICON
-        // -------------------------------------------------
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: SvgPicture.asset(
@@ -138,9 +133,6 @@ class _SkillItem extends StatelessWidget {
 
         const SizedBox(width: 10),
 
-        // -------------------------------------------------
-        // TEXT
-        // -------------------------------------------------
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,36 +1,49 @@
 // =======================================================
 // PROFILE LINKS
 // -------------------------------------------------------
-// Card de links externos do usuário
-//
-// Estrutura:
-// - Lista de links
-// - Botão adicionar
+// Agora conectado ao ProfileLinkModel (dinâmico)
 // =======================================================
 
 import 'package:flutter/material.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/features/profile/models/social_link_model.dart';
 
 class ProfileLinks extends StatelessWidget {
-  const ProfileLinks({super.key});
+  final List<SocialLinkModel> links;
+  final VoidCallback? onAdd;
+  final Function(SocialLinkModel)? onEdit;
+
+  const ProfileLinks({
+    super.key,
+    required this.links,
+    this.onAdd,
+    this.onEdit,
+  });
 
   @override
   Widget build(BuildContext context) {
-    Theme.of(context);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Column(
-        children: const [
+        children: [
 
-          _LinkItem(label: 'Behance'),
-          SizedBox(height: 12),
+          // ===================================================
+          // LISTA DINÂMICA
+          // ===================================================
+          ...links.map((link) => Column(
+                children: [
+                  _LinkItem(
+                    link: link,
+                    onEdit: () => onEdit?.call(link),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              )),
 
-          _LinkItem(label: 'GitHub'),
-          SizedBox(height: 12),
-
-          _AddLinkButton(),
+          // ===================================================
+          // BOTÃO ADD
+          // ===================================================
+          _AddLinkButton(onTap: onAdd),
         ],
       ),
     );
@@ -42,33 +55,32 @@ class ProfileLinks extends StatelessWidget {
 // =======================================================
 
 class _LinkItem extends StatelessWidget {
-  final String label;
+  final SocialLinkModel link;
+  final VoidCallback? onEdit;
 
   const _LinkItem({
-    required this.label,
+    required this.link,
+    this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-
       decoration: BoxDecoration(
         color: colors.cardTertiary,
         borderRadius: BorderRadius.circular(14),
       ),
-
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
 
           // TEXTO
           Text(
-            label,
+            link.label,
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -76,7 +88,10 @@ class _LinkItem extends StatelessWidget {
           ),
 
           // EDIT
-          const Icon(Icons.edit, size: 18),
+          GestureDetector(
+            onTap: onEdit,
+            child: const Icon(Icons.edit, size: 18),
+          ),
         ],
       ),
     );
@@ -88,24 +103,26 @@ class _LinkItem extends StatelessWidget {
 // =======================================================
 
 class _AddLinkButton extends StatelessWidget {
-  const _AddLinkButton();
+  final VoidCallback? onTap;
+
+  const _AddLinkButton({this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
-    return Container(
-      height: 56,
-      width: double.infinity,
-
-      decoration: BoxDecoration(
-        color: colors.cardTertiary,
-        borderRadius: BorderRadius.circular(14),
-      ),
-
-      child: const Center(
-        child: Icon(Icons.add),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: colors.cardTertiary,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Center(
+          child: Icon(Icons.add),
+        ),
       ),
     );
   }

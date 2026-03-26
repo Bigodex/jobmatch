@@ -6,29 +6,40 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
+import 'package:jobmatch/features/profile/models/education_model.dart';
 
 class ProfileEducation extends StatelessWidget {
-  const ProfileEducation({super.key});
+  final List<EducationModel> educations;
+
+  const ProfileEducation({
+    super.key,
+    required this.educations,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+
+    // =======================================================
+    // SAFE GUARD (evita tela vazia silenciosa)
+    // =======================================================
+
+    if (educations.isEmpty) {
+      return const SizedBox(); // ou coloca um placeholder se quiser
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Container(
         padding: const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -39,10 +50,6 @@ class ProfileEducation extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                // -------------------------------------------------
-                // TITLE + ICON
-                // -------------------------------------------------
                 Row(
                   children: [
                     SvgPicture.asset(
@@ -50,9 +57,7 @@ class ProfileEducation extends StatelessWidget {
                       width: 18,
                       height: 18,
                     ),
-
                     const SizedBox(width: 8),
-
                     const Text(
                       'Formações',
                       style: TextStyle(
@@ -62,7 +67,6 @@ class ProfileEducation extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 IconButton(
                   onPressed: () {},
                   icon: const Icon(Icons.edit, size: 18),
@@ -71,23 +75,60 @@ class ProfileEducation extends StatelessWidget {
             ),
 
             const Divider(),
-
             const SizedBox(height: 8),
 
             // ===================================================
-            // ITEM
+            // LISTA
             // ===================================================
-            const _EducationItem(
-              institution: 'Centro Universitário de Pato Branco - UNIDEP',
-              level: 'Ensino Superior',
-              course: 'ADS (análise e desenvolvimento de sistemas)',
-              period: '1 ano - Até o momento',
-              logoColor: Colors.red,
+            Column(
+              children: educations
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                    final index = entry.key;
+                    final edu = entry.value;
+                    final isLast = index == educations.length - 1;
+
+                    return Column(
+                      children: [
+                        _EducationItem(
+                          institution: edu.institution,
+                          course: edu.course,
+                          period: _formatPeriod(
+                            edu.startDate,
+                            edu.endDate,
+                          ),
+                          showLine: !isLast,
+                        ),
+                        if (!isLast)
+                          const SizedBox(height: 20),
+                      ],
+                    );
+                  })
+                  .toList(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // =======================================================
+  // FORMATADOR DE PERÍODO
+  // =======================================================
+
+  String _formatPeriod(DateTime start, DateTime? end) {
+    final formatter = DateFormat('MMM yyyy', 'pt_BR');
+
+    final startFormatted = formatter.format(start);
+
+    if (end == null) {
+      return '$startFormatted - Atual';
+    }
+
+    final endFormatted = formatter.format(end);
+
+    return '$startFormatted - $endFormatted';
   }
 }
 
@@ -97,17 +138,15 @@ class ProfileEducation extends StatelessWidget {
 
 class _EducationItem extends StatelessWidget {
   final String institution;
-  final String level;
   final String course;
   final String period;
-  final Color logoColor;
+  final bool showLine;
 
   const _EducationItem({
     required this.institution,
-    required this.level,
     required this.course,
     required this.period,
-    required this.logoColor,
+    required this.showLine,
   });
 
   @override
@@ -117,29 +156,28 @@ class _EducationItem extends StatelessWidget {
       children: [
 
         // ===================================================
-        // COLUNA ESQUERDA (LOGO + LINHA)
+        // TIMELINE
         // ===================================================
         Column(
           children: [
-
-            // LOGO
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: logoColor,
+                color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
+              child: const Icon(Icons.school, size: 18),
             ),
 
             const SizedBox(height: 8),
 
-            // LINHA
-            Container(
-              width: 2,
-              height: 70,
-              color: Colors.white
-            ),
+            if (showLine)
+              Container(
+                width: 2,
+                height: 70,
+                color: Colors.white.withOpacity(0.2),
+              ),
           ],
         ),
 
@@ -153,7 +191,6 @@ class _EducationItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // INSTITUIÇÃO
               Text(
                 institution,
                 style: const TextStyle(
@@ -162,31 +199,18 @@ class _EducationItem extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
 
-              // NÍVEL
-              Text(
-                level,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // CURSO
               Text(
                 course,
                 style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
 
               const SizedBox(height: 4),
 
-              // PERÍODO
               Text(
                 period,
                 style: TextStyle(

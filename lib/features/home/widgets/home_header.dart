@@ -21,7 +21,7 @@ class HomeHeader extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
 
-              const AppCover(),
+              const AppCover(imageUrl: '',),
 
               const Positioned(
                 bottom: -45,

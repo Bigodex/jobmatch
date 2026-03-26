@@ -1,7 +1,7 @@
 // =======================================================
 // PROFILE HARD SKILLS
 // -------------------------------------------------------
-// Card de habilidades técnicas
+// Agora conectado ao TechSkillModel (dados dinâmicos)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -9,9 +9,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
+import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 
 class ProfileHardSkills extends StatelessWidget {
-  const ProfileHardSkills({super.key});
+  final List<TechSkillModel> skills;
+
+  const ProfileHardSkills({
+    super.key,
+    required this.skills,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +26,12 @@ class ProfileHardSkills extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
-
       child: Container(
         padding: const EdgeInsets.all(16),
-
         decoration: BoxDecoration(
           color: colors.cardTertiary,
           borderRadius: BorderRadius.circular(16),
         ),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -39,10 +42,6 @@ class ProfileHardSkills extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
-                // -------------------------------------------------
-                // TITLE + ICON
-                // -------------------------------------------------
                 Row(
                   children: [
                     SvgPicture.asset(
@@ -50,9 +49,7 @@ class ProfileHardSkills extends StatelessWidget {
                       width: 16,
                       height: 16,
                     ),
-
                     const SizedBox(width: 8),
-
                     const Text(
                       'Habilidades Técnicas',
                       style: TextStyle(
@@ -71,47 +68,49 @@ class ProfileHardSkills extends StatelessWidget {
             ),
 
             const Divider(),
-
             const SizedBox(height: 8),
 
             // ===================================================
-            // LISTA
+            // LISTA DINÂMICA
             // ===================================================
-            const _HardSkillItem(
-              title: 'Design de Interfaces',
-              level: 'Avançado',
-              progress: 0.8,
-              tags: ['Figma', 'Adobe XD', 'Photoshop'],
-            ),
+            Column(
+              children: skills
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                    final index = entry.key;
+                    final skill = entry.value;
 
-            const SizedBox(height: 16),
+                    return Column(
+                      children: [
+                        _HardSkillItem(
+                          title: skill.title,
+                          level: _levelLabel(skill.level),
+                          progress: skill.level / 100, // 🔥 conversão
+                          tags: skill.tools,
+                        ),
 
-            const _HardSkillItem(
-              title: 'Design Responsivo',
-              level: 'Avançado',
-              progress: 0.75,
-              tags: ['Figma', 'Adobe XD', 'VS Code', '#CSS', '#HTML'],
-            ),
-
-            const SizedBox(height: 16),
-
-            const _HardSkillItem(
-              title: 'Desenvolvimento Web',
-              level: 'Avançado',
-              progress: 0.8,
-              tags: [
-                'VS Code',
-                'Git/GitHub',
-                'Postman',
-                '#CSS',
-                '#HTML',
-                'Node.js',
-              ],
+                        if (index != skills.length - 1)
+                          const SizedBox(height: 16),
+                      ],
+                    );
+                  })
+                  .toList(),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // =======================================================
+  // LABEL DE NÍVEL (UX MELHOR)
+  // =======================================================
+
+  String _levelLabel(int level) {
+    if (level >= 85) return 'Avançado';
+    if (level >= 60) return 'Intermediário';
+    return 'Básico';
   }
 }
 
@@ -140,9 +139,6 @@ class _HardSkillItem extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
 
-        // -------------------------------------------------
-        // ICON
-        // -------------------------------------------------
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: SvgPicture.asset(
@@ -154,15 +150,11 @@ class _HardSkillItem extends StatelessWidget {
 
         const SizedBox(width: 10),
 
-        // -------------------------------------------------
-        // CONTENT
-        // -------------------------------------------------
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // TÍTULO
               Text(
                 title,
                 style: const TextStyle(
@@ -173,7 +165,6 @@ class _HardSkillItem extends StatelessWidget {
 
               const SizedBox(height: 4),
 
-              // NÍVEL
               Text(
                 level,
                 style: TextStyle(
@@ -184,7 +175,6 @@ class _HardSkillItem extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // PROGRESS BAR
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
@@ -199,7 +189,6 @@ class _HardSkillItem extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // TAGS
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -234,7 +223,6 @@ class _TagChip extends StatelessWidget {
         horizontal: 12,
         vertical: 8,
       ),
-
       decoration: BoxDecoration(
         color: colors.cardSecondary,
         borderRadius: BorderRadius.circular(10),
@@ -242,12 +230,9 @@ class _TagChip extends StatelessWidget {
           color: Colors.white.withOpacity(0.05),
         ),
       ),
-
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 12,
-        ),
+        style: const TextStyle(fontSize: 12),
       ),
     );
   }
