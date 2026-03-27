@@ -112,7 +112,7 @@ class ProfileScreen extends ConsumerWidget {
                         // ---------------------------------------------
                         AppSectionCard(
                           child: ProfileEducation(
-                            educations: profile.education ?? [],
+                            educations: profile.education
                           ),
                         ),
 

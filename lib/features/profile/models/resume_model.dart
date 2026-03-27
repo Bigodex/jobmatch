@@ -3,9 +3,9 @@
 // -------------------------------------------------------
 // Informações do card "Resumo Profissional"
 //
-// Melhorias:
-// - Campos opcionais (evita crash)
-// - Suporte a labels (backend-driven UI)
+// ✔ Campos opcionais
+// ✔ Labels dinâmicas
+// ✔ copyWith correto (🔥 importante)
 // =======================================================
 
 class ResumeModel {
@@ -32,7 +32,6 @@ class ResumeModel {
           : null,
       city: map['city'],
       description: map['description'],
-
       labels: map['labels'] != null
           ? ResumeLabels.fromMap(map['labels'])
           : ResumeLabels.defaultLabels(),
@@ -49,6 +48,23 @@ class ResumeModel {
       'description': description,
       'labels': labels.toMap(),
     };
+  }
+
+  // =======================================================
+  // COPY WITH (🔥 ESSENCIAL)
+  // =======================================================
+  ResumeModel copyWith({
+    DateTime? birthDate,
+    String? city,
+    String? description,
+    ResumeLabels? labels,
+  }) {
+    return ResumeModel(
+      birthDate: birthDate ?? this.birthDate,
+      city: city ?? this.city,
+      description: description ?? this.description,
+      labels: labels ?? this.labels,
+    );
   }
 }
 
@@ -71,6 +87,9 @@ class ResumeLabels {
     required this.descriptionLabel,
   });
 
+  // =======================================================
+  // DEFAULT
+  // =======================================================
   factory ResumeLabels.defaultLabels() {
     return ResumeLabels(
       title: 'Resumo Profissional',
@@ -80,6 +99,9 @@ class ResumeLabels {
     );
   }
 
+  // =======================================================
+  // FROM MAP
+  // =======================================================
   factory ResumeLabels.fromMap(Map<String, dynamic> map) {
     return ResumeLabels(
       title: map['title'] ?? 'Resumo Profissional',
@@ -89,6 +111,9 @@ class ResumeLabels {
     );
   }
 
+  // =======================================================
+  // TO MAP
+  // =======================================================
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -96,5 +121,22 @@ class ResumeLabels {
       'cityLabel': cityLabel,
       'descriptionLabel': descriptionLabel,
     };
+  }
+
+  // =======================================================
+  // COPY WITH (opcional mas útil)
+  // =======================================================
+  ResumeLabels copyWith({
+    String? title,
+    String? birthDateLabel,
+    String? cityLabel,
+    String? descriptionLabel,
+  }) {
+    return ResumeLabels(
+      title: title ?? this.title,
+      birthDateLabel: birthDateLabel ?? this.birthDateLabel,
+      cityLabel: cityLabel ?? this.cityLabel,
+      descriptionLabel: descriptionLabel ?? this.descriptionLabel,
+    );
   }
 }

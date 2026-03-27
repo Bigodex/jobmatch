@@ -1,4 +1,12 @@
+// =======================================================
+// HOME HEADER
+// -------------------------------------------------------
+// Apenas exibição dos dados do profile
+// (reativo com Riverpod)
+// =======================================================
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/app_cover.dart';
 import '../../../shared/widgets/app_avatar.dart';
@@ -6,50 +14,72 @@ import '../../../shared/widgets/app_user_info.dart';
 import '../../../shared/widgets/app_primary_button.dart';
 import '../../../shared/widgets/app_section_card.dart';
 
-class HomeHeader extends StatelessWidget {
+import '../../profile/providers/profile_provider.dart';
+
+class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return AppSectionCard(
-      child: Column(
-        children: [
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
 
-          // COVER + AVATAR
-          Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
+    return profileAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+
+      error: (e, _) => const Center(child: Text('Erro ao carregar perfil')),
+
+      data: (profile) {
+        final user = profile.user;
+
+        return AppSectionCard(
+          child: Column(
             children: [
 
-              const AppCover(imageUrl: '',),
+              // ===================================================
+              // COVER + AVATAR
+              // ===================================================
+              Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
 
-              const Positioned(
-                bottom: -45,
-                child: AppAvatar(
-                  imageUrl: 'https://i.pravatar.cc/150?img=3',
-                  size: 90,
-                ),
+                  AppCover(
+                    imageUrl: user.coverUrl,
+                  ),
+
+                  Positioned(
+                    bottom: -45,
+                    child: AppAvatar(
+                      imageUrl: user.avatarUrl,
+                      size: 90,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 50),
+
+              // ===================================================
+              // USER INFO
+              // ===================================================
+              AppUserInfo(
+                name: user.name,
+                role: user.role,
+              ),
+
+              const SizedBox(height: 16),
+
+              // ===================================================
+              // BUTTON
+              // ===================================================
+              AppPrimaryButton(
+                text: 'Ver meu currículo',
+                onPressed: () {},
               ),
             ],
           ),
-
-          const SizedBox(height: 50),
-
-          // USER INFO
-          const AppUserInfo(
-            name: 'Pedro Piola',
-            role: 'Desenvolvedor FullStack',
-          ),
-
-          const SizedBox(height: 16),
-
-          // BUTTON
-          AppPrimaryButton(
-            text: 'Ver meu currículo',
-            onPressed: () {},
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

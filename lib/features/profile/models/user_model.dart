@@ -21,6 +21,9 @@ class UserModel {
     required this.views,
   });
 
+  // =======================================================
+  // FROM MAP
+  // =======================================================
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       name: map['name'] ?? '',
@@ -32,6 +35,9 @@ class UserModel {
     );
   }
 
+  // =======================================================
+  // TO MAP
+  // =======================================================
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -41,5 +47,26 @@ class UserModel {
       'connections': connections,
       'views': views,
     };
+  }
+
+  // =======================================================
+  // COPY WITH (ESSENCIAL PARA ATUALIZAÇÃO DE ESTADO)
+  // =======================================================
+  UserModel copyWith({
+    String? name,
+    String? role,
+    String? avatarUrl,
+    String? coverUrl,
+    int? connections,
+    int? views,
+  }) {
+    return UserModel(
+      name: name ?? this.name,
+      role: role ?? this.role,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      coverUrl: coverUrl ?? this.coverUrl,
+      connections: connections ?? this.connections,
+      views: views ?? this.views,
+    );
   }
 }

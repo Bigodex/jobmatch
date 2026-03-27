@@ -1,9 +1,5 @@
 // =======================================================
 // APP EDIT BUTTON
-// -------------------------------------------------------
-// Botão reutilizável para ações de edição.
-//
-// Usa AppColorsExtension para manter consistência visual
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -13,41 +9,40 @@ class AppEditButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String label;
   final IconData icon;
+  final Color? color;
 
   const AppEditButton({
     super.key,
     required this.onPressed,
     this.label = 'Editar',
     this.icon = Icons.edit,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // ===================================================
-    // EXTENSION (PEGA cardSecondary)
-    // ===================================================
     final colors = theme.extension<AppColorsExtension>()!;
+
+    final background = color ?? colors.cardTertiary;
+
+    // 🔥 REGRA: se for primary → texto preto
+    final isPrimary =
+        background == theme.colorScheme.primary;
+
+    final foreground = isPrimary ? Colors.black : Colors.white;
 
     return SizedBox(
       width: double.infinity,
       height: 48,
-
       child: ElevatedButton.icon(
         onPressed: onPressed,
 
-        // ===================================================
-        // ÍCONE
-        // ===================================================
         icon: Icon(
           icon,
           size: 18,
         ),
 
-        // ===================================================
-        // TEXTO
-        // ===================================================
         label: Text(
           label,
           style: const TextStyle(
@@ -56,14 +51,10 @@ class AppEditButton extends StatelessWidget {
           ),
         ),
 
-        // ===================================================
-        // ESTILO
-        // ===================================================
         style: ElevatedButton.styleFrom(
-          backgroundColor: colors.cardTertiary, // 🔥 AQUI
-          foregroundColor: Colors.white,
+          backgroundColor: background,
+          foregroundColor: foreground, // 🔥 DINÂMICO
           elevation: 0,
-
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

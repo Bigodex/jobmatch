@@ -181,7 +181,7 @@ class _ExperienceItem extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withOpacity(0.2),
                   ),
                 ),
               ],

@@ -2,11 +2,6 @@
 // PROFILE SERVICE
 // -------------------------------------------------------
 // Backend real com Firebase
-//
-// Estrutura:
-// - Busca do Firestore
-// - Fallback preparado (comentado)
-// - Pronto para expansão futura
 // =======================================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +19,9 @@ import '../models/social_link_model.dart';
 class ProfileService {
   final _firestore = FirebaseFirestore.instance;
 
+  // 👇 CENTRALIZA ID (IMPORTANTE)
+  final String _profileId = 'S0izTate1BROQEV81Ct4';
+
   // =======================================================
   // GET PROFILE (FIREBASE)
   // =======================================================
@@ -31,7 +29,7 @@ class ProfileService {
     try {
       final doc = await _firestore
           .collection('profiles')
-          .doc('S0izTate1BROQEV81Ct4') // 👈 seu ID atual
+          .doc(_profileId)
           .get();
 
       if (!doc.exists || doc.data() == null) {
@@ -40,18 +38,12 @@ class ProfileService {
 
       final data = doc.data()!;
 
-      // ===================================================
-      // DEBUG
-      // ===================================================
       print('🔥 FIREBASE PROFILE: $data');
 
       return ProfileModel(
         user: UserModel.fromMap(data['user']),
         resume: ResumeModel.fromMap(data['resume']),
 
-        // ===================================================
-        // FUTURO (quando adicionar no Firestore)
-        // ===================================================
         languages: data['languages'] != null
             ? (data['languages'] as List)
                 .map((e) => LanguageModel.fromMap(e))
@@ -95,53 +87,34 @@ class ProfileService {
   }
 
   // =======================================================
-  // 🔥 MOCK DE REFERÊNCIA (NÃO USAR - SOMENTE BACKUP)
+  // UPDATE PROFILE (🔥 AGORA REAL)
   // =======================================================
-  /*
-  Future<ProfileModel> getProfileMock() async {
-    await Future.delayed(const Duration(seconds: 1));
+  Future<void> updateProfile(ProfileModel profile) async {
+    try {
+      final data = {
+        'user': profile.user.toMap(),
+        'resume': profile.resume.toMap(),
 
-    final Map<String, dynamic> data = {
-      'user': {
-        'name': 'Pedro Piola',
-        'role': 'Desenvolvedor FullStack',
-        'avatarUrl': 'https://i.pravatar.cc/150?img=3',
-        'coverUrl': 'https://picsum.photos/600/300',
-        'connections': 1000,
-        'views': 10000,
-      },
+        'languages': profile.languages.map((e) => e.toMap()).toList(),
+        'softSkills': profile.softSkills.map((e) => e.toMap()).toList(),
+        'techSkills': profile.techSkills.map((e) => e.toMap()).toList(),
+        'experiences': profile.experiences.map((e) => e.toMap()).toList(),
+        'education': profile.education.map((e) => e.toMap()).toList(),
+        'links': profile.links.map((e) => e.toMap()).toList(),
+      };
 
-      'resume': {
-        'birthDate': '1996-10-23',
-        'city': 'Brasil - Pato Branco PR',
-        'description': 'Descrição mock',
-        'labels': {
-          'title': 'Resumo Profissional',
-          'birthDateLabel': 'Data de Nascimento',
-          'cityLabel': 'Cidade',
-          'descriptionLabel': 'Descrição',
-        }
-      },
+      print('💾 SALVANDO PROFILE NO FIREBASE...');
+      print('👉 COVER: ${profile.user.coverUrl}');
 
-      // 👇 PRÓXIMOS CAMPOS (AINDA NÃO NO FIREBASE)
-      'languages': [],
-      'softSkills': [],
-      'techSkills': [],
-      'experiences': [],
-      'education': [],
-      'links': [],
-    };
+      await _firestore
+          .collection('profiles')
+          .doc(_profileId)
+          .update(data);
 
-    return ProfileModel(
-      user: UserModel.fromMap(data['user']),
-      resume: ResumeModel.fromMap(data['resume']),
-      languages: [],
-      softSkills: [],
-      techSkills: [],
-      experiences: [],
-      education: [],
-      links: [],
-    );
+      print('✅ PROFILE ATUALIZADO COM SUCESSO!');
+    } catch (e) {
+      print('❌ ERRO AO ATUALIZAR PROFILE: $e');
+      rethrow;
+    }
   }
-  */
 }
