@@ -14,10 +14,7 @@ import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 class ProfileSoftSkills extends StatelessWidget {
   final List<SoftSkillModel> skills;
 
-  const ProfileSoftSkills({
-    super.key,
-    required this.skills,
-  });
+  const ProfileSoftSkills({super.key, required this.skills});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +32,6 @@ class ProfileSoftSkills extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ===================================================
             // HEADER
             // ===================================================
@@ -67,34 +63,33 @@ class ProfileSoftSkills extends StatelessWidget {
               ],
             ),
 
-            const Divider(),
+            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
             // ===================================================
             // LISTA DINÂMICA
             // ===================================================
             Column(
-              children: skills
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                    final index = entry.key;
-                    final skill = entry.value;
+              children: skills.asMap().entries.map((entry) {
+                final index = entry.key;
+                final skill = entry.value;
 
-                    return Column(
-                      children: [
-                        _SkillItem(
-                          title: skill.title,
-                          description: skill.description,
-                        ),
+                return Column(
+                  children: [
+                    _SkillItem(
+                      title: skill.title,
+                      description: skill.description,
+                    ),
 
-                        // Divider entre itens (menos no último)
-                        if (index != skills.length - 1)
-                          const Divider(height: 24),
-                      ],
-                    );
-                  })
-                  .toList(),
+                    // Divider entre itens (menos no último)
+                    if (index != skills.length - 1)
+                      Divider(
+                        height: 24,
+                        color: Theme.of(context).dividerColor.withOpacity(0.2),
+                      ),
+                  ],
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -111,17 +106,13 @@ class _SkillItem extends StatelessWidget {
   final String title;
   final String description;
 
-  const _SkillItem({
-    required this.title,
-    required this.description,
-  });
+  const _SkillItem({required this.title, required this.description});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: SvgPicture.asset(
@@ -137,7 +128,6 @@ class _SkillItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               Text(
                 title,
                 style: const TextStyle(
@@ -152,7 +142,7 @@ class _SkillItem extends StatelessWidget {
                 description,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white
                 ),
               ),
             ],

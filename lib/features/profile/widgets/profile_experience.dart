@@ -1,13 +1,5 @@
 // =======================================================
 // PROFILE EXPERIENCE
-// -------------------------------------------------------
-// Card de experiências profissionais
-// Ajustado para manter:
-// - empresa
-// - período
-// - cargo
-// - descrição
-// - timeline visual mais próxima do layout original
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -21,10 +13,7 @@ import 'package:jobmatch/features/profile/models/experience_model.dart';
 class ProfileExperience extends StatelessWidget {
   final List<ExperienceModel> experiences;
 
-  const ProfileExperience({
-    super.key,
-    required this.experiences,
-  });
+  const ProfileExperience({super.key, required this.experiences});
 
   @override
   Widget build(BuildContext context) {
@@ -42,19 +31,13 @@ class ProfileExperience extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ===================================================
             // HEADER
-            // ===================================================
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      AppIcons.briefcase,
-                      width: 18,
-                      height: 18,
-                    ),
+                    SvgPicture.asset(AppIcons.briefcase, width: 18, height: 18),
                     const SizedBox(width: 8),
                     const Text(
                       'Experiência',
@@ -72,20 +55,14 @@ class ProfileExperience extends StatelessWidget {
               ],
             ),
 
-            const Divider(),
+            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
-            // ===================================================
-            // LISTA DINÂMICA
-            // ===================================================
+            // LISTA
             Column(
-              children: experiences.asMap().entries.map((entry) {
-                final index = entry.key;
-                final experience = entry.value;
-                final isLast = index == experiences.length - 1;
-
+              children: experiences.map((experience) {
                 return Padding(
-                  padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+                  padding: const EdgeInsets.only(bottom: 24),
                   child: _ExperienceItem(
                     company: experience.company,
                     period: _formatPeriod(
@@ -94,9 +71,9 @@ class ProfileExperience extends StatelessWidget {
                     ),
                     role: experience.role,
                     description: experience.description,
+                    logoUrl: experience.logoUrl,
                     logoColor: _getLogoColor(experience.company),
                     logoText: _getLogoText(experience.company),
-                    showLine: !isLast,
                   ),
                 );
               }).toList(),
@@ -106,10 +83,6 @@ class ProfileExperience extends StatelessWidget {
       ),
     );
   }
-
-  // =======================================================
-  // FORMATA PERÍODO
-  // =======================================================
 
   String _formatPeriod(DateTime startDate, DateTime? endDate) {
     final startFormatted = DateFormat('dd/MM/yyyy').format(startDate);
@@ -137,38 +110,18 @@ class ProfileExperience extends StatelessWidget {
     return months <= 0 ? 1 : months;
   }
 
-  // =======================================================
-  // MOCK VISUAL DE LOGO/COR
-  // -------------------------------------------------------
-  // Enquanto seu model não tiver logoUrl / brandColor
-  // =======================================================
-
   Color _getLogoColor(String company) {
     final normalized = company.toLowerCase();
 
-    if (normalized.contains('ids')) {
-      return const Color(0xFF0D5BD7);
-    }
-
-    if (normalized.contains('agende')) {
-      return const Color(0xFF5C5C5C);
-    }
+    if (normalized.contains('ids')) return const Color(0xFF0D5BD7);
+    if (normalized.contains('agende')) return const Color(0xFF5C5C5C);
 
     return const Color(0xFF3A3A3A);
   }
 
   String _getLogoText(String company) {
-    final normalized = company.toLowerCase();
-
-    if (normalized.contains('ids')) {
-      return 'ids';
-    }
-
-    if (normalized.contains('agende')) {
-      return 'a';
-    }
-
-    return company.isNotEmpty ? company[0].toUpperCase() : '?';
+    if (company.isEmpty) return '?';
+    return company[0].toUpperCase();
   }
 }
 
@@ -181,117 +134,128 @@ class _ExperienceItem extends StatelessWidget {
   final String period;
   final String role;
   final String description;
+  final String? logoUrl;
   final Color logoColor;
   final String logoText;
-  final bool showLine;
 
   const _ExperienceItem({
     required this.company,
     required this.period,
     required this.role,
     required this.description,
+    required this.logoUrl,
     required this.logoColor,
     required this.logoText,
-    required this.showLine,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ===================================================
-        // COLUNA ESQUERDA (LOGO + TIMELINE)
-        // ===================================================
-        SizedBox(
-          width: 44,
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: logoColor,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // COLUNA ESQUERDA
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                // LOGO
+                ClipRRect(
                   borderRadius: BorderRadius.circular(8),
+                  child: logoUrl != null && logoUrl!.isNotEmpty
+                      ? Image.network(
+                          logoUrl!,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return _fallbackLogo();
+                          },
+                        )
+                      : _fallbackLogo(),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  logoText,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+
+                const SizedBox(height: 8),
+
+                // LINHA SEMPRE VISÍVEL
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: Colors.white.withOpacity(0.8),
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 8),
-
-              if (showLine)
-                Container(
-                  width: 2,
-                  height: 126,
-                  color: Colors.white.withOpacity(0.18),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(width: 12),
+          const SizedBox(width: 12),
 
-        // ===================================================
-        // CONTEÚDO
-        // ===================================================
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // EMPRESA
-              Text(
-                company,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+          // CONTEÚDO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  company,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 4),
+                const SizedBox(height: 4),
 
-              // PERÍODO
-              Text(
-                period,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
+                Text(
+                  period,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 14),
+                const SizedBox(height: 14),
 
-              // CARGO
-              Text(
-                role,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                Text(
+                  role,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 6),
+                const SizedBox(height: 6),
 
-              // DESCRIÇÃO
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.35,
-                  color: Colors.white.withOpacity(0.6),
+                Text(
+                  description,
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.35,
+                    color: Colors.white
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallbackLogo() {
+    return Container(
+      width: 36,
+      height: 36,
+      color: logoColor,
+      alignment: Alignment.center,
+      child: Text(
+        logoText,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
-      ],
+      ),
     );
   }
 }

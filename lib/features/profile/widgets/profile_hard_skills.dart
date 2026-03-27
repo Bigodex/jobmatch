@@ -14,10 +14,7 @@ import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 class ProfileHardSkills extends StatelessWidget {
   final List<TechSkillModel> skills;
 
-  const ProfileHardSkills({
-    super.key,
-    required this.skills,
-  });
+  const ProfileHardSkills({super.key, required this.skills});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +32,6 @@ class ProfileHardSkills extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ===================================================
             // HEADER
             // ===================================================
@@ -44,11 +40,7 @@ class ProfileHardSkills extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      AppIcons.laptop,
-                      width: 16,
-                      height: 16,
-                    ),
+                    SvgPicture.asset(AppIcons.laptop, width: 16, height: 16),
                     const SizedBox(width: 8),
                     const Text(
                       'Habilidades Técnicas',
@@ -67,35 +59,30 @@ class ProfileHardSkills extends StatelessWidget {
               ],
             ),
 
-            const Divider(),
+            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
             // ===================================================
             // LISTA DINÂMICA
             // ===================================================
             Column(
-              children: skills
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                    final index = entry.key;
-                    final skill = entry.value;
+              children: skills.asMap().entries.map((entry) {
+                final index = entry.key;
+                final skill = entry.value;
 
-                    return Column(
-                      children: [
-                        _HardSkillItem(
-                          title: skill.title,
-                          level: _levelLabel(skill.level),
-                          progress: skill.level / 100, // 🔥 conversão
-                          tags: skill.tools,
-                        ),
+                return Column(
+                  children: [
+                    _HardSkillItem(
+                      title: skill.title,
+                      level: _levelLabel(skill.level),
+                      progress: skill.level / 100, // 🔥 conversão
+                      tags: skill.tools,
+                    ),
 
-                        if (index != skills.length - 1)
-                          const SizedBox(height: 16),
-                      ],
-                    );
-                  })
-                  .toList(),
+                    if (index != skills.length - 1) const SizedBox(height: 16),
+                  ],
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -138,14 +125,9 @@ class _HardSkillItem extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: SvgPicture.asset(
-            AppIcons.code,
-            width: 16,
-            height: 16,
-          ),
+          child: SvgPicture.asset(AppIcons.code, width: 16, height: 16),
         ),
 
         const SizedBox(width: 10),
@@ -154,7 +136,6 @@ class _HardSkillItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               Text(
                 title,
                 style: const TextStyle(
@@ -169,7 +150,7 @@ class _HardSkillItem extends StatelessWidget {
                 level,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white
                 ),
               ),
 
@@ -181,9 +162,7 @@ class _HardSkillItem extends StatelessWidget {
                   value: progress,
                   minHeight: 4,
                   backgroundColor: Colors.white.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation(
-                    theme.colorScheme.primary,
-                  ),
+                  valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
                 ),
               ),
 
@@ -192,9 +171,7 @@ class _HardSkillItem extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: tags
-                    .map((tag) => _TagChip(label: tag))
-                    .toList(),
+                children: tags.map((tag) => _TagChip(label: tag)).toList(),
               ),
             ],
           ),
@@ -219,21 +196,13 @@ class _TagChip extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: colors.cardSecondary,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 12),
-      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
     );
   }
 }

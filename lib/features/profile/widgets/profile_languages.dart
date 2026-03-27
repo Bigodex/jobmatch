@@ -14,10 +14,7 @@ import 'package:jobmatch/features/profile/models/language_model.dart';
 class ProfileLanguages extends StatelessWidget {
   final List<LanguageModel> languages;
 
-  const ProfileLanguages({
-    super.key,
-    required this.languages,
-  });
+  const ProfileLanguages({super.key, required this.languages});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +32,6 @@ class ProfileLanguages extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ===================================================
             // HEADER
             // ===================================================
@@ -44,11 +40,7 @@ class ProfileLanguages extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      AppIcons.language,
-                      width: 18,
-                      height: 18,
-                    ),
+                    SvgPicture.asset(AppIcons.language, width: 18, height: 18),
                     const SizedBox(width: 8),
                     const Text(
                       'Idiomas',
@@ -67,7 +59,7 @@ class ProfileLanguages extends StatelessWidget {
               ],
             ),
 
-            const Divider(),
+            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
             const SizedBox(height: 12),
 
             // ===================================================
@@ -114,34 +106,22 @@ class _LanguageChip extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: colors.cardSecondary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-
           // BANDEIRA
-          Text(
-            flag,
-            style: const TextStyle(fontSize: 18),
-          ),
+          Text(flag, style: const TextStyle(fontSize: 18)),
 
           const SizedBox(width: 8),
 
           // TEXTO
-          Text(
-            '$label | $level',
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text('$label | $level', style: const TextStyle(fontSize: 14)),
         ],
       ),
     );

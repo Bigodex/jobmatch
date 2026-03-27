@@ -1,7 +1,5 @@
 // =======================================================
 // PROFILE EDUCATION
-// -------------------------------------------------------
-// Card de formações acadêmicas
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -24,13 +22,7 @@ class ProfileEducation extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
-    // =======================================================
-    // SAFE GUARD (evita tela vazia silenciosa)
-    // =======================================================
-
-    if (educations.isEmpty) {
-      return const SizedBox(); // ou coloca um placeholder se quiser
-    }
+    if (educations.isEmpty) return const SizedBox();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -44,19 +36,13 @@ class ProfileEducation extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // ===================================================
             // HEADER
-            // ===================================================
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(
-                      AppIcons.cap,
-                      width: 18,
-                      height: 18,
-                    ),
+                    SvgPicture.asset(AppIcons.cap, width: 18, height: 18),
                     const SizedBox(width: 8),
                     const Text(
                       'Formações',
@@ -74,38 +60,23 @@ class ProfileEducation extends StatelessWidget {
               ],
             ),
 
-            const Divider(),
+            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
-            // ===================================================
             // LISTA
-            // ===================================================
             Column(
-              children: educations
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                    final index = entry.key;
-                    final edu = entry.value;
-                    final isLast = index == educations.length - 1;
-
-                    return Column(
-                      children: [
-                        _EducationItem(
-                          institution: edu.institution,
-                          course: edu.course,
-                          period: _formatPeriod(
-                            edu.startDate,
-                            edu.endDate,
-                          ),
-                          showLine: !isLast,
-                        ),
-                        if (!isLast)
-                          const SizedBox(height: 20),
-                      ],
-                    );
-                  })
-                  .toList(),
+              children: educations.map((edu) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: _EducationItem(
+                    institution: edu.institution,
+                    course: edu.course,
+                    description: edu.description,
+                    period: _formatPeriod(edu.startDate, edu.endDate),
+                    logoUrl: edu.logoUrl,
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -113,21 +84,13 @@ class ProfileEducation extends StatelessWidget {
     );
   }
 
-  // =======================================================
-  // FORMATADOR DE PERÍODO
-  // =======================================================
-
   String _formatPeriod(DateTime start, DateTime? end) {
     final formatter = DateFormat('MMM yyyy', 'pt_BR');
-
     final startFormatted = formatter.format(start);
 
-    if (end == null) {
-      return '$startFormatted - Atual';
-    }
+    if (end == null) return '$startFormatted - Atual';
 
     final endFormatted = formatter.format(end);
-
     return '$startFormatted - $endFormatted';
   }
 }
@@ -139,89 +102,119 @@ class ProfileEducation extends StatelessWidget {
 class _EducationItem extends StatelessWidget {
   final String institution;
   final String course;
+  final String description;
   final String period;
-  final bool showLine;
+  final String? logoUrl;
 
   const _EducationItem({
     required this.institution,
     required this.course,
+    required this.description,
     required this.period,
-    required this.showLine,
+    required this.logoUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
 
-        // ===================================================
-        // TIMELINE
-        // ===================================================
-        Column(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.school, size: 18),
+          // COLUNA ESQUERDA
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: logoUrl != null && logoUrl!.isNotEmpty
+                      ? Image.network(
+                          logoUrl!,
+                          width: 36,
+                          height: 36,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return _fallback();
+                          },
+                        )
+                      : _fallback(),
+                ),
+
+                const SizedBox(height: 8),
+
+                // LINHA DINÂMICA
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 8),
-
-            if (showLine)
-              Container(
-                width: 2,
-                height: 70,
-                color: Colors.white.withOpacity(0.2),
-              ),
-          ],
-        ),
-
-        const SizedBox(width: 12),
-
-        // ===================================================
-        // CONTEÚDO
-        // ===================================================
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              Text(
-                institution,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              Text(
-                course,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              Text(
-                period,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
-                ),
-              ),
-            ],
           ),
-        ),
-      ],
+
+          const SizedBox(width: 12),
+
+          // CONTEÚDO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                Text(
+                  institution,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  period,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Text(
+                  course,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  description,
+                  textAlign: TextAlign.justify,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.35,
+                    color: Colors.white
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: 36,
+      height: 36,
+      color: Colors.white.withOpacity(0.1),
+      child: const Icon(Icons.school, size: 18),
     );
   }
 }
