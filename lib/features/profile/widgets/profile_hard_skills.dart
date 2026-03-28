@@ -1,11 +1,10 @@
 // =======================================================
 // PROFILE HARD SKILLS
-// -------------------------------------------------------
-// Agora conectado ao TechSkillModel (dados dinâmicos)
 // =======================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
@@ -52,14 +51,20 @@ class ProfileHardSkills extends StatelessWidget {
                   ],
                 ),
 
+                // 🔥 BOTÃO EDITAR CORRIGIDO
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push(
+                      '/edit-hard-skills',
+                      extra: skills, // ✅ CORRETO
+                    );
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                 ),
               ],
             ),
 
-            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+            Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
             // ===================================================
@@ -75,11 +80,11 @@ class ProfileHardSkills extends StatelessWidget {
                     _HardSkillItem(
                       title: skill.title,
                       level: _levelLabel(skill.level),
-                      progress: skill.level / 100, // 🔥 conversão
+                      progress: skill.level / 100,
                       tags: skill.tools,
                     ),
-
-                    if (index != skills.length - 1) const SizedBox(height: 16),
+                    if (index != skills.length - 1)
+                      const SizedBox(height: 16),
                   ],
                 );
               }).toList(),
@@ -91,9 +96,8 @@ class ProfileHardSkills extends StatelessWidget {
   }
 
   // =======================================================
-  // LABEL DE NÍVEL (UX MELHOR)
+  // LABEL DE NÍVEL
   // =======================================================
-
   String _levelLabel(int level) {
     if (level >= 85) return 'Avançado';
     if (level >= 60) return 'Intermediário';
@@ -148,9 +152,9 @@ class _HardSkillItem extends StatelessWidget {
 
               Text(
                 level,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
-                  color: Colors.white
+                  color: Colors.white,
                 ),
               ),
 
@@ -162,7 +166,8 @@ class _HardSkillItem extends StatelessWidget {
                   value: progress,
                   minHeight: 4,
                   backgroundColor: Colors.white.withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
+                  valueColor:
+                      AlwaysStoppedAnimation(theme.colorScheme.primary),
                 ),
               ),
 
@@ -171,7 +176,8 @@ class _HardSkillItem extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: tags.map((tag) => _TagChip(label: tag)).toList(),
+                children:
+                    tags.map((tag) => _TagChip(label: tag)).toList(),
               ),
             ],
           ),
@@ -198,11 +204,14 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: colors.cardSecondary,
+        color: colors.cardTertiary,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withOpacity(0.09)),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12),
+      ),
     );
   }
 }

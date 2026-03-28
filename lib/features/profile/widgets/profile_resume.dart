@@ -54,7 +54,6 @@ class ProfileResume extends StatelessWidget {
                   ],
                 ),
 
-                // 🔥 AQUI ESTÁ A MUDANÇA REAL
                 IconButton(
                   onPressed: () {
                     Navigator.push(
@@ -72,25 +71,42 @@ class ProfileResume extends StatelessWidget {
             Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 12),
 
-            _info(AppIcons.cake, resume!.labels.birthDateLabel,
-                _formatBirth(resume!.birthDate)),
+            _info(
+              icon: AppIcons.cake,
+              title: resume!.labels.birthDateLabel,
+              value: _formatBirth(resume!.birthDate),
+            ),
 
             const SizedBox(height: 12),
 
-            _info(AppIcons.building, resume!.labels.cityLabel,
-                _safe(resume!.city)),
+            _info(
+              icon: AppIcons.building,
+              title: resume!.labels.cityLabel,
+              value: _safe(resume!.city),
+            ),
 
             const SizedBox(height: 12),
 
-            _info(AppIcons.info, resume!.labels.descriptionLabel,
-                _safe(resume!.description)),
+            // 🔥 DESCRIPTION COM LINHA + JUSTIFY
+            _infoWithLine(
+              icon: AppIcons.info,
+              title: resume!.labels.descriptionLabel,
+              value: _safe(resume!.description),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _info(String icon, String title, String value) {
+  // =======================================================
+  // ITEM NORMAL (SEM LINHA)
+  // =======================================================
+  Widget _info({
+    required String icon,
+    required String title,
+    required String value,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -100,13 +116,68 @@ class ProfileResume extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
               Text(value),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  // =======================================================
+  // ITEM COM LINHA + JUSTIFY (DESCRIPTION)
+  // =======================================================
+  Widget _infoWithLine({
+    required String icon,
+    required String title,
+    required String value,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ÍCONE + LINHA
+          SizedBox(
+            width: 16,
+            child: Column(
+              children: [
+                SvgPicture.asset(icon, width: 16, height: 16),
+
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    margin: const EdgeInsets.only(top: 8),
+                    color: Colors.white24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // TEXTO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+
+                // 🔥 JUSTIFY AQUI
+                Text(
+                  value,
+                  textAlign: TextAlign.justify,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

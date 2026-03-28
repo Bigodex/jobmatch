@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
@@ -57,7 +58,9 @@ class ProfileSoftSkills extends StatelessWidget {
                 ),
 
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push('/edit-soft-skills', extra: skills);
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                 ),
               ],
@@ -140,10 +143,7 @@ class _SkillItem extends StatelessWidget {
 
               Text(
                 description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.white
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.white),
               ),
             ],
           ),

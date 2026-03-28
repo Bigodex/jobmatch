@@ -2,10 +2,6 @@
 // PROFILE PROVIDER
 // -------------------------------------------------------
 // Gerencia estado + edição do perfil
-// - cover
-// - avatar
-// - user info
-// - resume
 // =======================================================
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +9,11 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../models/profile_model.dart';
 import '../models/resume_model.dart';
+import '../models/language_model.dart';
+import '../models/soft_skill_model.dart';
+import '../models/tech_skill_model.dart';
+import '../models/experience_model.dart'; // 🔥 ADD
+
 import '../services/profile_service.dart';
 
 // =======================================================
@@ -108,16 +109,73 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel>> {
   }
 
   // ===================================================
-  // PERSISTÊNCIA CENTRALIZADA
+  // UPDATE LANGUAGES
+  // ===================================================
+  Future<void> updateLanguages(List<LanguageModel> languages) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      languages: languages,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // UPDATE SOFT SKILLS
+  // ===================================================
+  Future<void> updateSoftSkills(List<SoftSkillModel> skills) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      softSkills: skills,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // UPDATE HARD SKILLS
+  // ===================================================
+  Future<void> updateHardSkills(List<TechSkillModel> skills) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      techSkills: skills,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // 🔥 UPDATE EXPERIENCES (NOVO)
+  // ===================================================
+  Future<void> updateExperiences(List<ExperienceModel> experiences) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      experiences: experiences,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // PERSISTÊNCIA
   // ===================================================
   Future<void> _persist(ProfileModel profile) async {
     try {
       await _service.updateProfile(profile);
     } catch (e) {
-      // 🔥 Aqui você pode evoluir:
-      // - rollback de state
-      // - snackbar global
-      // - retry automático
+      // TODO: tratamento futuro
     }
   }
 }

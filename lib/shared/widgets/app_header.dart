@@ -2,7 +2,7 @@
 // APP HEADER
 // -------------------------------------------------------
 // Header padrão do app (layout fixo)
-// - Menu (esquerda)
+// - Menu (esquerda) OU Back
 // - Título dinâmico
 // - Ação (direita)
 // =======================================================
@@ -18,11 +18,15 @@ class AppHeader extends StatelessWidget {
   final VoidCallback? onMenuTap;
   final VoidCallback? onActionTap;
 
+  // 🔥 NOVO
+  final bool showBackButton;
+
   const AppHeader({
     super.key,
     required this.title,
     this.onMenuTap,
     this.onActionTap,
+    this.showBackButton = false, // default mantém comportamento atual
   });
 
   @override
@@ -33,22 +37,21 @@ class AppHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       height: 56,
-
       decoration: BoxDecoration(
-        color: appColors.header, // 🔥 vindo do theme
+        color: appColors.header,
       ),
-
       child: Row(
         children: [
-
           // ===================================================
-          // MENU ICON (ESQUERDA)
+          // LEFT ICON (MENU OU BACK)
           // ===================================================
 
           GestureDetector(
-            onTap: onMenuTap,
+            onTap: showBackButton
+                ? () => Navigator.pop(context)
+                : onMenuTap,
             child: SvgPicture.asset(
-              AppIcons.burger,
+              showBackButton ? AppIcons.arrowleft : AppIcons.burger,
               width: 22,
               height: 22,
               colorFilter: ColorFilter.mode(
@@ -61,7 +64,7 @@ class AppHeader extends StatelessWidget {
           const SizedBox(width: 12),
 
           // ===================================================
-          // TITLE (DINÂMICO)
+          // TITLE
           // ===================================================
 
           Text(
@@ -74,7 +77,7 @@ class AppHeader extends StatelessWidget {
           const Spacer(),
 
           // ===================================================
-          // ACTION ICON (DIREITA)
+          // ACTION ICON
           // ===================================================
 
           GestureDetector(

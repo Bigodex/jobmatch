@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/features/profile/models/language_model.dart';
+import 'package:jobmatch/features/profile/screens/edit_language_screen.dart';
 
 class ProfileLanguages extends StatelessWidget {
   final List<LanguageModel> languages;
@@ -53,7 +54,15 @@ class ProfileLanguages extends StatelessWidget {
                 ),
 
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EditLanguageScreen(languages: languages),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                 ),
               ],
@@ -108,9 +117,9 @@ class _LanguageChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: colors.cardSecondary,
+        color: colors.cardTertiary,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

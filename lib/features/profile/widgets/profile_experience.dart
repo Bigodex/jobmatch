@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart'; // 🔥 ADD
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
@@ -48,14 +49,21 @@ class ProfileExperience extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // 🔥 BOTÃO EDITAR AJUSTADO
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push(
+                      '/edit-experience',
+                      extra: experiences, // ✅ CORRETO
+                    );
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                 ),
               ],
             ),
 
-            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+            Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
             // LISTA
@@ -154,12 +162,10 @@ class _ExperienceItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // COLUNA ESQUERDA
           SizedBox(
             width: 44,
             child: Column(
               children: [
-                // LOGO
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: logoUrl != null && logoUrl!.isNotEmpty
@@ -177,7 +183,6 @@ class _ExperienceItem extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
-                // LINHA SEMPRE VISÍVEL
                 Expanded(
                   child: Container(
                     width: 2,
@@ -190,7 +195,6 @@ class _ExperienceItem extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // CONTEÚDO
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,9 +211,9 @@ class _ExperienceItem extends StatelessWidget {
 
                 Text(
                   period,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.white
+                    color: Colors.white,
                   ),
                 ),
 
@@ -228,10 +232,10 @@ class _ExperienceItem extends StatelessWidget {
                 Text(
                   description,
                   textAlign: TextAlign.justify,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     height: 1.35,
-                    color: Colors.white
+                    color: Colors.white,
                   ),
                 ),
               ],

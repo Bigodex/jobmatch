@@ -1,5 +1,8 @@
 // =======================================================
-// EDIT RESUME SCREEN
+// EDIT SOFT SKILLS SCREEN
+// -------------------------------------------------------
+// Edição das habilidades comportamentais
+// seguindo padrão do EditResumeScreen
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -9,63 +12,88 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 
-import 'package:jobmatch/features/profile/models/resume_model.dart';
+import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
 import 'package:jobmatch/features/profile/screens/success_screen.dart';
+
 import 'package:jobmatch/shared/widgets/app_header.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
 
-class EditResumeScreen extends ConsumerStatefulWidget {
-  final ResumeModel resume;
+class EditSoftSkillsScreen extends ConsumerStatefulWidget {
+  final List<SoftSkillModel> skills;
 
-  const EditResumeScreen({super.key, required this.resume});
+  const EditSoftSkillsScreen({
+    super.key,
+    required this.skills,
+  });
 
   @override
-  ConsumerState<EditResumeScreen> createState() =>
-      _EditResumeScreenState();
+  ConsumerState<EditSoftSkillsScreen> createState() =>
+      _EditSoftSkillsScreenState();
 }
 
-class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
-  late TextEditingController city;
-  late TextEditingController description;
-  DateTime? birth;
+class _EditSoftSkillsScreenState
+    extends ConsumerState<EditSoftSkillsScreen> {
+
+  late List<TextEditingController> titles;
+  late List<TextEditingController> descriptions;
 
   @override
   void initState() {
     super.initState();
-    city = TextEditingController(text: widget.resume.city);
-    description = TextEditingController(text: widget.resume.description);
-    birth = widget.resume.birthDate;
+
+    titles = widget.skills
+        .map((e) => TextEditingController(text: e.title))
+        .toList();
+
+    descriptions = widget.skills
+        .map((e) => TextEditingController(text: e.description))
+        .toList();
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: birth ?? DateTime(2000),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
+  // =======================================================
+  // ADICIONAR NOVA SKILL
+  // =======================================================
+  void _addSkill() {
+    setState(() {
+      titles.add(TextEditingController());
+      descriptions.add(TextEditingController());
+    });
+  }
+
+  // =======================================================
+  // REMOVER SKILL
+  // =======================================================
+  void _removeSkill(int index) {
+    setState(() {
+      titles.removeAt(index);
+      descriptions.removeAt(index);
+    });
+  }
+
+  // =======================================================
+  // SALVAR
+  // =======================================================
+  Future<void> _save() async {
+    final updated = List.generate(
+      titles.length,
+      (index) => SoftSkillModel(
+        title: titles[index].text,
+        description: descriptions[index].text,
+      ),
     );
 
-    if (picked != null) setState(() => birth = picked);
+    await ref.read(profileProvider.notifier)
+        .updateSoftSkills(updated);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SuccessScreen(),
+      ),
+    );
   }
 
- Future<void> _save() async {
-  final updated = widget.resume.copyWith(
-    city: city.text,
-    description: description.text,
-    birthDate: birth,
-  );
-
-  await ref.read(profileProvider.notifier).updateResume(updated);
-
-  // 🔥 REDIRECIONA PARA TELA DE SUCESSO
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const SuccessScreen(),
-    ),
-  );
-}
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -79,7 +107,10 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
           // ===================================================
           const SafeArea(
             bottom: false,
-            child: AppHeader(title: 'Editar', showBackButton: true,),
+            child: AppHeader(
+              title: 'Editar',
+              showBackButton: true,
+            ),
           ),
 
           // ===================================================
@@ -101,19 +132,21 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+
+                          // ===================================================
                           // HEADER DO CARD
+                          // ===================================================
                           Row(
                             children: [
                               SvgPicture.asset(
-                                AppIcons.cv,
+                                AppIcons.softskills,
                                 width: 18,
                                 height: 18,
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                widget.resume.labels.title,
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(
+                              const Text(
+                                'Habilidades Comportamentais',
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -123,61 +156,44 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
+
                           const SizedBox(height: 12),
 
                           // ===================================================
-                          // DATA
+                          // LISTA EDITÁVEL
                           // ===================================================
-                          _editItem(
-                            icon: AppIcons.cake,
-                            title: widget.resume.labels.birthDateLabel,
-                            child: GestureDetector(
-                              onTap: _pickDate,
-                              child: _inputContainer(
-                                context,
-                                child: Text(
-                                  birth != null
-                                      ? '${birth!.day}/${birth!.month}/${birth!.year}'
-                                      : 'Selecionar data',
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
+                          Column(
+                            children: List.generate(titles.length, (index) {
+                              return Column(
+                                children: [
+                                  _skillItem(index),
+
+                                  if (index != titles.length - 1)
+                                    Divider(
+                                      height: 24,
+                                      color: theme.dividerColor
+                                          .withOpacity(0.2),
+                                    ),
+                                ],
+                              );
+                            }),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
 
                           // ===================================================
-                          // CIDADE
+                          // BOTÃO ADICIONAR
                           // ===================================================
-                          _editItem(
-                            icon: AppIcons.building,
-                            title: widget.resume.labels.cityLabel,
-                            child: _inputField(
-                              controller: city,
-                              hint: 'Digite sua cidade',
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // ===================================================
-                          // DESCRIÇÃO (TEXTAREA DINÂMICA)
-                          // ===================================================
-                          _editItem(
-                            icon: AppIcons.info,
-                            title: widget.resume.labels.descriptionLabel,
-                            child: _inputField(
-                              controller: description,
-                              hint: 'Fale sobre você...',
-                              minLines: 3,
-                            ),
+                          TextButton.icon(
+                            onPressed: _addSkill,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Adicionar habilidade'),
                           ),
 
                           const SizedBox(height: 20),
 
                           // ===================================================
-                          // BOTÃO
+                          // BOTÃO SALVAR
                           // ===================================================
                           SizedBox(
                             width: double.infinity,
@@ -200,40 +216,61 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
   }
 
   // =======================================================
-  // ITEM PADRÃO (FULL WIDTH)
+  // ITEM DE SKILL
   // =======================================================
-  Widget _editItem({
-    required String icon,
-    required String title,
-    required Widget child,
-  }) {
+  Widget _skillItem(int index) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+
+        // TÍTULO + DELETE
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            SvgPicture.asset(icon, width: 16, height: 16),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+            Row(
+              children: [
+                SvgPicture.asset(
+                  AppIcons.softskillsitem,
+                  width: 16,
+                  height: 16,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Habilidade',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+
+            IconButton(
+              onPressed: () => _removeSkill(index),
+              icon: const Icon(Icons.delete, size: 18),
             ),
           ],
         ),
+
         const SizedBox(height: 8),
 
-        SizedBox(
-          width: double.infinity,
-          child: child,
+        _inputField(
+          controller: titles[index],
+          hint: 'Ex: Comunicação',
+        ),
+
+        const SizedBox(height: 10),
+
+        _inputField(
+          controller: descriptions[index],
+          hint: 'Descreva essa habilidade...',
+          minLines: 3,
         ),
       ],
     );
   }
 
   // =======================================================
-  // INPUT / TEXTAREA DINÂMICA
+  // INPUT PADRÃO
   // =======================================================
   Widget _inputField({
     required TextEditingController controller,
@@ -244,30 +281,23 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
 
     return TextField(
       controller: controller,
-
-      // 🔥 TEXT AREA FLEXÍVEL
       minLines: minLines ?? 1,
       maxLines: null,
       keyboardType: TextInputType.multiline,
-
       style: const TextStyle(fontSize: 13),
-
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 13),
         filled: true,
         fillColor: Colors.white.withOpacity(0.04),
-
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 12,
         ),
-
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.white24),
         ),
-
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
@@ -276,28 +306,6 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  // =======================================================
-  // CONTAINER (DATA)
-  // =======================================================
-  Widget _inputContainer(
-    BuildContext context, {
-    required Widget child,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 12,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white24),
-      ),
-      child: child,
     );
   }
 }

@@ -35,6 +35,7 @@ class AppIcons {
   static const String laptop = '${_base}laptop.svg';
   static const String briefcase = '${_base}briefcase.svg';
   static const String cap = '${_base}briefcase.svg';
+  static const String arrowleft = '${_base}arrow_left.svg';
 
 
   // ===================================================
