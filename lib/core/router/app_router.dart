@@ -12,7 +12,9 @@ import 'package:jobmatch/features/profile/models/resume_model.dart';
 import 'package:jobmatch/features/profile/models/language_model.dart';
 import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
-import 'package:jobmatch/features/profile/models/experience_model.dart'; // 🔥 ADD
+import 'package:jobmatch/features/profile/models/experience_model.dart';
+import 'package:jobmatch/features/profile/models/education_model.dart';
+import 'package:jobmatch/features/profile/models/social_link_model.dart'; // 🔥 ADD
 
 // =======================================================
 // SCREENS
@@ -32,7 +34,9 @@ import '../../features/profile/screens/edit_resume_screen.dart';
 import '../../features/profile/screens/edit_language_screen.dart';
 import '../../features/profile/screens/edit_soft_skills_screen.dart';
 import '../../features/profile/screens/edit_hard_skills_screen.dart';
-import '../../features/profile/screens/edit_experience_screen.dart'; // 🔥 ADD
+import '../../features/profile/screens/edit_experience_screen.dart';
+import '../../features/profile/screens/edit_education_screen.dart';
+import '../../features/profile/screens/edit_links_screen.dart'; // 🔥 ADD
 
 // Bottom Nav
 import 'app_bottom_nav.dart';
@@ -91,10 +95,6 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // ==================================================
-    // EDIT SOFT SKILLS
-    // ==================================================
-
     GoRoute(
       path: '/edit-soft-skills',
       name: 'edit-soft-skills',
@@ -103,10 +103,6 @@ final GoRouter appRouter = GoRouter(
         return EditSoftSkillsScreen(skills: skills);
       },
     ),
-
-    // ==================================================
-    // EDIT HARD SKILLS
-    // ==================================================
 
     GoRoute(
       path: '/edit-hard-skills',
@@ -117,16 +113,34 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // ==================================================
-    // 🔥 EDIT EXPERIENCE (NOVO)
-    // ==================================================
-
     GoRoute(
       path: '/edit-experience',
       name: 'edit-experience',
       builder: (context, state) {
         final experiences = state.extra as List<ExperienceModel>;
         return EditExperienceScreen(experiences: experiences);
+      },
+    ),
+
+    GoRoute(
+      path: '/edit-education',
+      name: 'edit-education',
+      builder: (context, state) {
+        final educations = state.extra as List<EducationModel>;
+        return EditEducationScreen(educations: educations);
+      },
+    ),
+
+    // ==================================================
+    // 🔥 EDIT LINKS (NOVO)
+    // ==================================================
+
+    GoRoute(
+      path: '/edit-links',
+      name: 'edit-links',
+      builder: (context, state) {
+        final links = state.extra as List<SocialLinkModel>;
+        return EditLinksScreen(links: links);
       },
     ),
 

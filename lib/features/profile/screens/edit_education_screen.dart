@@ -1,5 +1,8 @@
 // =======================================================
-// EDIT SOFT SKILLS SCREEN (COM VALIDAÇÃO + CONTADOR)
+// EDIT EDUCATION SCREEN
+// -------------------------------------------------------
+// Edição das formações acadêmicas
+// PADRÃO PREMIUM (igual experience)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -8,145 +11,101 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
-import 'package:jobmatch/core/utils/validators.dart';
 
-import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
+import 'package:jobmatch/features/profile/models/education_model.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
 import 'package:jobmatch/features/profile/screens/success_screen.dart';
 
 import 'package:jobmatch/shared/widgets/app_header.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
 
-class EditSoftSkillsScreen extends ConsumerStatefulWidget {
-  final List<SoftSkillModel> skills;
+class EditEducationScreen extends ConsumerStatefulWidget {
+  final List<EducationModel> educations;
 
-  const EditSoftSkillsScreen({
+  const EditEducationScreen({
     super.key,
-    required this.skills,
+    required this.educations,
   });
 
   @override
-  ConsumerState<EditSoftSkillsScreen> createState() =>
-      _EditSoftSkillsScreenState();
+  ConsumerState<EditEducationScreen> createState() =>
+      _EditEducationScreenState();
 }
 
-class _EditSoftSkillsScreenState
-    extends ConsumerState<EditSoftSkillsScreen> {
-  late List<TextEditingController> titles;
-  late List<TextEditingController> descriptions;
+class _EditEducationScreenState
+    extends ConsumerState<EditEducationScreen> {
 
-  String? error;
-  bool isValid = true;
-  bool hasChanged = false;
+  late List<TextEditingController> institutions;
+  late List<TextEditingController> courses;
+  late List<TextEditingController> descriptions;
+  late List<TextEditingController> logoUrls;
+
+  late List<DateTime> startDates;
+  late List<DateTime?> endDates;
 
   @override
   void initState() {
     super.initState();
 
-    titles = widget.skills
-        .map((e) => TextEditingController(text: e.title))
+    institutions = widget.educations
+        .map((e) => TextEditingController(text: e.institution))
         .toList();
 
-    descriptions = widget.skills
+    courses = widget.educations
+        .map((e) => TextEditingController(text: e.course))
+        .toList();
+
+    descriptions = widget.educations
         .map((e) => TextEditingController(text: e.description))
         .toList();
 
-    for (final t in titles) {
-      t.addListener(_validate);
-    }
+    logoUrls = widget.educations
+        .map((e) => TextEditingController(text: e.logoUrl ?? ''))
+        .toList();
 
-    for (final d in descriptions) {
-      d.addListener(_validate);
-    }
-
-    _validate();
+    startDates = widget.educations.map((e) => e.startDate).toList();
+    endDates = widget.educations.map((e) => e.endDate).toList();
   }
 
-  @override
-  void dispose() {
-    for (final t in titles) {
-      t.dispose();
-    }
-
-    for (final d in descriptions) {
-      d.dispose();
-    }
-
-    super.dispose();
-  }
-
-  // =======================================================
-  // VALIDAÇÃO GLOBAL
-  // =======================================================
-  void _validate() {
-    final list = List.generate(
-      titles.length,
-      (i) => SoftSkillModel(
-        title: titles[i].text,
-        description: descriptions[i].text,
-      ),
-    );
-
-    error = AppValidators.validateSoftSkills(list);
-
-    hasChanged = AppValidators.hasSoftSkillsChanged(
-      widget.skills,
-      list,
-    );
-
-    isValid = error == null;
-
-    setState(() {});
-  }
-
-  // =======================================================
-  // ADICIONAR SKILL
-  // =======================================================
-  void _addSkill() {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-
-    titleController.addListener(_validate);
-    descriptionController.addListener(_validate);
-
+  void _addEducation() {
     setState(() {
-      titles.add(titleController);
-      descriptions.add(descriptionController);
+      institutions.add(TextEditingController());
+      courses.add(TextEditingController());
+      descriptions.add(TextEditingController());
+      logoUrls.add(TextEditingController());
+      startDates.add(DateTime.now());
+      endDates.add(null);
     });
-
-    _validate();
   }
 
-  // =======================================================
-  // REMOVER SKILL
-  // =======================================================
-  void _removeSkill(int index) {
-    titles[index].dispose();
-    descriptions[index].dispose();
-
+  void _removeEducation(int index) {
     setState(() {
-      titles.removeAt(index);
+      institutions.removeAt(index);
+      courses.removeAt(index);
       descriptions.removeAt(index);
+      logoUrls.removeAt(index);
+      startDates.removeAt(index);
+      endDates.removeAt(index);
     });
-
-    _validate();
   }
 
-  // =======================================================
-  // SALVAR
-  // =======================================================
   Future<void> _save() async {
     final updated = List.generate(
-      titles.length,
-      (index) => SoftSkillModel(
-        title: titles[index].text.trim(),
-        description: descriptions[index].text.trim(),
+      institutions.length,
+      (index) => EducationModel(
+        institution: institutions[index].text,
+        course: courses[index].text,
+        description: descriptions[index].text,
+        startDate: startDates[index],
+        endDate: endDates[index],
+        logoUrl: logoUrls[index].text.isEmpty
+            ? null
+            : logoUrls[index].text,
       ),
     );
 
-    await ref.read(profileProvider.notifier).updateSoftSkills(updated);
-
-    if (!mounted) return;
+    await ref.read(profileProvider.notifier)
+        .updateEducations(updated);
 
     Navigator.pushReplacement(
       context,
@@ -171,6 +130,7 @@ class _EditSoftSkillsScreenState
               showBackButton: true,
             ),
           ),
+
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -187,32 +147,39 @@ class _EditSoftSkillsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+
+                          // HEADER
                           Row(
                             children: [
                               SvgPicture.asset(
-                                AppIcons.softskills,
+                                AppIcons.cap,
                                 width: 18,
                                 height: 18,
                               ),
                               const SizedBox(width: 8),
                               const Text(
-                                'Habilidades Comportamentais',
+                                'Formações',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
+
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
+
                           const SizedBox(height: 12),
+
+                          // LISTA
                           Column(
-                            children: List.generate(titles.length, (index) {
+                            children: List.generate(institutions.length, (index) {
                               return Column(
                                 children: [
-                                  _skillItem(index),
-                                  if (index != titles.length - 1)
+                                  _educationItem(index),
+
+                                  if (index != institutions.length - 1)
                                     Divider(
                                       height: 24,
                                       color: theme.dividerColor.withOpacity(0.2),
@@ -221,28 +188,21 @@ class _EditSoftSkillsScreenState
                               );
                             }),
                           ),
-                          if (error != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                error!,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
+
                           const SizedBox(height: 16),
+
                           TextButton.icon(
-                            onPressed: _addSkill,
+                            onPressed: _addEducation,
                             icon: const Icon(Icons.add),
-                            label: const Text('Adicionar habilidade'),
+                            label: const Text('Adicionar formação'),
                           ),
+
                           const SizedBox(height: 20),
+
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: (isValid && hasChanged) ? _save : null,
+                              onPressed: _save,
                               child: const Text('Salvar'),
                             ),
                           ),
@@ -260,62 +220,68 @@ class _EditSoftSkillsScreenState
   }
 
   // =======================================================
-  // ITEM DE SKILL
+  // ITEM DE EDIÇÃO
   // =======================================================
-  Widget _skillItem(int index) {
+  Widget _educationItem(int index) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+
+        // HEADER ITEM
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
                 SvgPicture.asset(
-                  AppIcons.softskillsitem,
+                  AppIcons.cap,
                   width: 16,
                   height: 16,
                 ),
                 const SizedBox(width: 10),
                 const Text(
-                  'Habilidade',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'Formação',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
             IconButton(
-              onPressed: () => _removeSkill(index),
+              onPressed: () => _removeEducation(index),
               icon: const Icon(Icons.delete, size: 18),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: titles[index],
-          hint: 'Ex: Comunicação',
-          maxLength: 40,
-        ),
+
         const SizedBox(height: 10),
-        _inputField(
-          controller: descriptions[index],
-          hint: 'Descreva essa habilidade...',
+
+        _input(institutions[index], 'Instituição (ex: Unidep)'),
+
+        const SizedBox(height: 10),
+
+        _input(courses[index], 'Curso (ex: ADS)'),
+
+        const SizedBox(height: 10),
+
+        _input(
+          descriptions[index],
+          'Descreva sua formação...',
           minLines: 3,
-          maxLength: 200,
         ),
+
+        const SizedBox(height: 10),
+
+        _input(logoUrls[index], 'URL do logo (opcional)'),
       ],
     );
   }
 
   // =======================================================
-  // INPUT PADRÃO COM CONTADOR
+  // INPUT PADRÃO
   // =======================================================
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
+  Widget _input(
+    TextEditingController controller,
+    String hint, {
     int? minLines,
-    required int maxLength,
   }) {
     final theme = Theme.of(context);
 
@@ -323,19 +289,13 @@ class _EditSoftSkillsScreenState
       controller: controller,
       minLines: minLines ?? 1,
       maxLines: null,
-      maxLength: maxLength,
-      keyboardType: TextInputType.multiline,
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13),
-        counterText: '${controller.text.length}/$maxLength',
         filled: true,
         fillColor: Colors.white.withOpacity(0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Colors.white24),
@@ -348,7 +308,6 @@ class _EditSoftSkillsScreenState
           ),
         ),
       ),
-      onChanged: (_) => setState(() {}),
     );
   }
 }

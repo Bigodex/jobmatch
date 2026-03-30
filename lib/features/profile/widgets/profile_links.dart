@@ -1,23 +1,20 @@
 // =======================================================
 // PROFILE LINKS
 // -------------------------------------------------------
-// Agora conectado ao ProfileLinkModel (dinâmico)
+// Agora com navegação direta para edição
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // 🔥 ADD
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/profile/models/social_link_model.dart';
 
 class ProfileLinks extends StatelessWidget {
   final List<SocialLinkModel> links;
-  final VoidCallback? onAdd;
-  final Function(SocialLinkModel)? onEdit;
 
   const ProfileLinks({
     super.key,
     required this.links,
-    this.onAdd,
-    this.onEdit,
   });
 
   @override
@@ -34,7 +31,12 @@ class ProfileLinks extends StatelessWidget {
                 children: [
                   _LinkItem(
                     link: link,
-                    onEdit: () => onEdit?.call(link),
+                    onEdit: () {
+                      context.push(
+                        '/edit-links',
+                        extra: links,
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -43,7 +45,14 @@ class ProfileLinks extends StatelessWidget {
           // ===================================================
           // BOTÃO ADD
           // ===================================================
-          _AddLinkButton(onTap: onAdd),
+          _AddLinkButton(
+            onTap: () {
+              context.push(
+                '/edit-links',
+                extra: links,
+              );
+            },
+          ),
         ],
       ),
     );

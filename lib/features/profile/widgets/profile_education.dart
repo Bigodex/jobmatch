@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart'; // 🔥 ADD
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
@@ -54,7 +55,12 @@ class ProfileEducation extends StatelessWidget {
                   ],
                 ),
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    context.push(
+                      '/edit-education',
+                      extra: educations,
+                    );
+                  },
                   icon: const Icon(Icons.edit, size: 18),
                 ),
               ],

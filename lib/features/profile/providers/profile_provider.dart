@@ -12,7 +12,9 @@ import '../models/resume_model.dart';
 import '../models/language_model.dart';
 import '../models/soft_skill_model.dart';
 import '../models/tech_skill_model.dart';
-import '../models/experience_model.dart'; // 🔥 ADD
+import '../models/experience_model.dart';
+import '../models/education_model.dart';
+import '../models/social_link_model.dart'; // 🔥 ADD
 
 import '../services/profile_service.dart';
 
@@ -154,7 +156,7 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel>> {
   }
 
   // ===================================================
-  // 🔥 UPDATE EXPERIENCES (NOVO)
+  // UPDATE EXPERIENCES
   // ===================================================
   Future<void> updateExperiences(List<ExperienceModel> experiences) async {
     final current = state.value;
@@ -162,6 +164,36 @@ class ProfileNotifier extends StateNotifier<AsyncValue<ProfileModel>> {
 
     final updated = current.copyWith(
       experiences: experiences,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // UPDATE EDUCATIONS
+  // ===================================================
+  Future<void> updateEducations(List<EducationModel> educations) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      education: educations,
+    );
+
+    state = AsyncData(updated);
+    await _persist(updated);
+  }
+
+  // ===================================================
+  // 🔥 UPDATE LINKS (NOVO)
+  // ===================================================
+  Future<void> updateLinks(List<SocialLinkModel> links) async {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.copyWith(
+      links: links, // 👈 importante: nome do campo no model
     );
 
     state = AsyncData(updated);

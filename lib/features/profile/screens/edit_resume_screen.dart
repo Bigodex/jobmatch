@@ -1,5 +1,5 @@
 // =======================================================
-// EDIT RESUME SCREEN
+// EDIT RESUME SCREEN (COM VALIDAÇÃO + CONTADOR)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/utils/validators.dart';
 
 import 'package:jobmatch/features/profile/models/resume_model.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
@@ -30,12 +31,53 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
   late TextEditingController description;
   DateTime? birth;
 
+  String? cityError;
+  String? descriptionError;
+  String? birthError;
+
+  bool isValid = false;
+  bool hasChanged = false;
+
   @override
   void initState() {
     super.initState();
+
     city = TextEditingController(text: widget.resume.city);
     description = TextEditingController(text: widget.resume.description);
     birth = widget.resume.birthDate;
+
+    city.addListener(_validate);
+    description.addListener(_validate);
+
+    _validate();
+  }
+
+  // ===================================================
+  // VALIDAÇÃO
+  // ===================================================
+  void _validate() {
+    final newCity = city.text;
+    final newDescription = description.text;
+
+    cityError = AppValidators.validateCity(newCity);
+    descriptionError =
+        AppValidators.validateDescription(newDescription);
+    birthError = AppValidators.validateBirthDate(birth);
+
+    hasChanged = AppValidators.hasResumeChanged(
+      originalCity: widget.resume.city ?? '',
+      newCity: newCity,
+      originalDescription: widget.resume.description ?? '',
+      newDescription: newDescription,
+      originalBirth: widget.resume.birthDate,
+      newBirth: birth,
+    );
+
+    isValid = cityError == null &&
+        descriptionError == null &&
+        birthError == null;
+
+    setState(() {});
   }
 
   Future<void> _pickDate() async {
@@ -46,26 +88,29 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
       lastDate: DateTime.now(),
     );
 
-    if (picked != null) setState(() => birth = picked);
+    if (picked != null) {
+      setState(() => birth = picked);
+      _validate();
+    }
   }
 
- Future<void> _save() async {
-  final updated = widget.resume.copyWith(
-    city: city.text,
-    description: description.text,
-    birthDate: birth,
-  );
+  Future<void> _save() async {
+    final updated = widget.resume.copyWith(
+      city: city.text,
+      description: description.text,
+      birthDate: birth,
+    );
 
-  await ref.read(profileProvider.notifier).updateResume(updated);
+    await ref.read(profileProvider.notifier).updateResume(updated);
 
-  // 🔥 REDIRECIONA PARA TELA DE SUCESSO
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const SuccessScreen(),
-    ),
-  );
-}
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SuccessScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -74,17 +119,11 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // ===================================================
-          // HEADER
-          // ===================================================
           const SafeArea(
             bottom: false,
-            child: AppHeader(title: 'Editar', showBackButton: true,),
+            child: AppHeader(title: 'Editar', showBackButton: true),
           ),
 
-          // ===================================================
-          // CONTEÚDO
-          // ===================================================
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
@@ -101,7 +140,7 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // HEADER DO CARD
+
                           Row(
                             children: [
                               SvgPicture.asset(
@@ -123,47 +162,61 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
+
                           const SizedBox(height: 12),
 
-                          // ===================================================
                           // DATA
-                          // ===================================================
                           _editItem(
                             icon: AppIcons.cake,
                             title: widget.resume.labels.birthDateLabel,
-                            child: GestureDetector(
-                              onTap: _pickDate,
-                              child: _inputContainer(
-                                context,
-                                child: Text(
-                                  birth != null
-                                      ? '${birth!.day}/${birth!.month}/${birth!.year}'
-                                      : 'Selecionar data',
-                                  style: const TextStyle(fontSize: 13),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                  onTap: _pickDate,
+                                  child: _inputContainer(
+                                    context,
+                                    child: Text(
+                                      birth != null
+                                          ? '${birth!.day}/${birth!.month}/${birth!.year}'
+                                          : 'Selecionar data',
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                if (birthError != null)
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      birthError!,
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
 
                           const SizedBox(height: 12),
 
-                          // ===================================================
                           // CIDADE
-                          // ===================================================
                           _editItem(
                             icon: AppIcons.building,
                             title: widget.resume.labels.cityLabel,
                             child: _inputField(
                               controller: city,
                               hint: 'Digite sua cidade',
+                              error: cityError,
+                              maxLength: 60,
                             ),
                           ),
 
                           const SizedBox(height: 12),
 
-                          // ===================================================
-                          // DESCRIÇÃO (TEXTAREA DINÂMICA)
-                          // ===================================================
+                          // DESCRIÇÃO
                           _editItem(
                             icon: AppIcons.info,
                             title: widget.resume.labels.descriptionLabel,
@@ -171,18 +224,20 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                               controller: description,
                               hint: 'Fale sobre você...',
                               minLines: 3,
+                              error: descriptionError,
+                              maxLength: 500,
                             ),
                           ),
 
                           const SizedBox(height: 20),
 
-                          // ===================================================
-                          // BOTÃO
-                          // ===================================================
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _save,
+                              onPressed:
+                                  (isValid && hasChanged)
+                                      ? _save
+                                      : null,
                               child: const Text('Salvar'),
                             ),
                           ),
@@ -200,61 +255,32 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
   }
 
   // =======================================================
-  // ITEM PADRÃO (FULL WIDTH)
-  // =======================================================
-  Widget _editItem({
-    required String icon,
-    required String title,
-    required Widget child,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            SvgPicture.asset(icon, width: 16, height: 16),
-            const SizedBox(width: 10),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        SizedBox(
-          width: double.infinity,
-          child: child,
-        ),
-      ],
-    );
-  }
-
-  // =======================================================
-  // INPUT / TEXTAREA DINÂMICA
+  // INPUT COM CONTADOR
   // =======================================================
   Widget _inputField({
     required TextEditingController controller,
     required String hint,
+    String? error,
     int? minLines,
+    required int maxLength,
   }) {
     final theme = Theme.of(context);
 
     return TextField(
       controller: controller,
-
-      // 🔥 TEXT AREA FLEXÍVEL
       minLines: minLines ?? 1,
       maxLines: null,
+      maxLength: maxLength,
       keyboardType: TextInputType.multiline,
-
       style: const TextStyle(fontSize: 13),
+
+      onChanged: (_) => setState(() {}),
 
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13),
+        errorText: error,
+        counterText: '${controller.text.length}/$maxLength',
+
         filled: true,
         fillColor: Colors.white.withOpacity(0.04),
 
@@ -279,9 +305,29 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
     );
   }
 
-  // =======================================================
-  // CONTAINER (DATA)
-  // =======================================================
+  Widget _editItem({
+    required String icon,
+    required String title,
+    required Widget child,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SvgPicture.asset(icon, width: 16, height: 16),
+            const SizedBox(width: 10),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(width: double.infinity, child: child),
+      ],
+    );
+  }
+
   Widget _inputContainer(
     BuildContext context, {
     required Widget child,
