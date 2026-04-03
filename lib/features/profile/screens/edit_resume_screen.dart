@@ -140,7 +140,7 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               SvgPicture.asset(
@@ -158,7 +158,7 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                               ),
                             ],
                           ),
-
+                          const SizedBox(height: 8),
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
@@ -200,7 +200,7 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
 
                           // CIDADE
                           _editItem(
@@ -214,7 +214,7 @@ class _EditResumeScreenState extends ConsumerState<EditResumeScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 0),
 
                           // DESCRIÇÃO
                           _editItem(

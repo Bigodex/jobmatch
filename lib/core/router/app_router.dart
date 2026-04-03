@@ -14,15 +14,22 @@ import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 import 'package:jobmatch/features/profile/models/experience_model.dart';
 import 'package:jobmatch/features/profile/models/education_model.dart';
-import 'package:jobmatch/features/profile/models/social_link_model.dart'; // 🔥 ADD
+import 'package:jobmatch/features/profile/models/social_link_model.dart';
 
 // =======================================================
 // SCREENS
 // =======================================================
 
 // Onboarding
-import '../../features/onboarding/screens/intro_screen.dart';
-import '../../features/onboarding/screens/welcome_screen.dart';
+import '../../features/intro/screens/intro_screen.dart';
+import '../../features/intro/screens/welcome_screen.dart';
+
+// 🔥 AUTH
+import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/register_screen.dart';
+
+// 🔥 ONBOARDING (NOVO)
+import '../../features/onboarding/screens/onboarding_flow_screen.dart';
 
 // Home / Chat / Profile
 import '../../features/home/screens/home_screen.dart';
@@ -36,7 +43,7 @@ import '../../features/profile/screens/edit_soft_skills_screen.dart';
 import '../../features/profile/screens/edit_hard_skills_screen.dart';
 import '../../features/profile/screens/edit_experience_screen.dart';
 import '../../features/profile/screens/edit_education_screen.dart';
-import '../../features/profile/screens/edit_links_screen.dart'; // 🔥 ADD
+import '../../features/profile/screens/edit_links_screen.dart';
 
 // Bottom Nav
 import 'app_bottom_nav.dart';
@@ -58,7 +65,7 @@ final GoRouter appRouter = GoRouter(
   routes: [
 
     // ==================================================
-    // ONBOARDING
+    // INTRO
     // ==================================================
 
     GoRoute(
@@ -74,7 +81,33 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ==================================================
-    // 🔥 TELAS FULLSCREEN (SEM BOTTOM NAV)
+    // AUTH
+    // ==================================================
+
+    GoRoute(
+      path: '/login',
+      name: 'login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+
+    GoRoute(
+      path: '/register',
+      name: 'register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+
+    // ==================================================
+    // 🔥 ONBOARDING (NOVO)
+    // ==================================================
+
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingFlowScreen(),
+    ),
+
+    // ==================================================
+    // TELAS FULLSCREEN (SEM BOTTOM NAV)
     // ==================================================
 
     GoRoute(
@@ -131,10 +164,6 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
-    // ==================================================
-    // 🔥 EDIT LINKS (NOVO)
-    // ==================================================
-
     GoRoute(
       path: '/edit-links',
       name: 'edit-links',
@@ -154,27 +183,18 @@ final GoRouter appRouter = GoRouter(
       },
       routes: [
 
-        // ----------------------------------------------
-        // HOME
-        // ----------------------------------------------
         GoRoute(
           path: '/home',
           name: 'home',
           builder: (context, state) => const HomeScreen(),
         ),
 
-        // ----------------------------------------------
-        // CHAT
-        // ----------------------------------------------
         GoRoute(
           path: '/chat',
           name: 'chat',
           builder: (context, state) => const ChatScreen(),
         ),
 
-        // ----------------------------------------------
-        // PROFILE
-        // ----------------------------------------------
         GoRoute(
           path: '/profile',
           name: 'profile',

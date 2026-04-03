@@ -4,6 +4,7 @@
 
 import 'package:jobmatch/features/profile/models/language_model.dart';
 import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
+import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 
 class AppValidators {
 
@@ -175,6 +176,76 @@ class AppValidators {
     for (int i = 0; i < original.length; i++) {
       if (original[i].title != edited[i].title ||
           original[i].description != edited[i].description) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // ===================================================
+  // ================= HARD SKILLS ======================
+  // ===================================================
+
+  static String? validateHardSkillTitle(String value) {
+    if (value.trim().isEmpty) return 'Habilidade obrigatória';
+    if (value.length < 2) return 'Muito curta';
+    if (value.length > 40) return 'Muito longa';
+    if (!_textRegex.hasMatch(value)) return 'Caracteres inválidos';
+    return null;
+  }
+
+  static String? validateHardSkillLevel(int level) {
+    if (level < 0 || level > 100) return 'Nível inválido';
+    if (level < 10) return 'Nível muito baixo';
+    return null;
+  }
+
+  static String? validateHardSkillTools(List<String> tools) {
+    if (tools.length > 10) return 'Máximo de 10 tags';
+    return null;
+  }
+
+  static String? validateHardSkills(List<TechSkillModel> list) {
+    if (list.isEmpty) return 'Adicione ao menos uma habilidade';
+
+    final names = list.map((e) => e.title).toList();
+
+    if (names.length != names.toSet().length) {
+      return 'Habilidades duplicadas';
+    }
+
+    for (final skill in list) {
+
+      final titleError = validateHardSkillTitle(skill.title);
+      if (titleError != null) {
+        return '${skill.title}: $titleError';
+      }
+
+      final levelError = validateHardSkillLevel(skill.level);
+      if (levelError != null) {
+        return '${skill.title}: $levelError';
+      }
+
+      final toolsError = validateHardSkillTools(skill.tools);
+      if (toolsError != null) {
+        return '${skill.title}: $toolsError';
+      }
+    }
+
+    return null;
+  }
+
+  static bool hasHardSkillsChanged(
+    List<TechSkillModel> original,
+    List<TechSkillModel> edited,
+  ) {
+    if (original.length != edited.length) return true;
+
+    for (int i = 0; i < original.length; i++) {
+      if (original[i].title != edited[i].title ||
+          original[i].level != edited[i].level ||
+          original[i].tools.toString() != edited[i].tools.toString()) {
         return true;
       }
     }

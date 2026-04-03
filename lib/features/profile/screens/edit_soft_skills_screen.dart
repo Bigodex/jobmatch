@@ -1,5 +1,5 @@
 // =======================================================
-// EDIT SOFT SKILLS SCREEN (COM VALIDAÇÃO + CONTADOR)
+// EDIT SOFT SKILLS SCREEN (COM JUSTIFY)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -75,9 +75,6 @@ class _EditSoftSkillsScreenState
     super.dispose();
   }
 
-  // =======================================================
-  // VALIDAÇÃO GLOBAL
-  // =======================================================
   void _validate() {
     final list = List.generate(
       titles.length,
@@ -99,9 +96,6 @@ class _EditSoftSkillsScreenState
     setState(() {});
   }
 
-  // =======================================================
-  // ADICIONAR SKILL
-  // =======================================================
   void _addSkill() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
@@ -117,9 +111,6 @@ class _EditSoftSkillsScreenState
     _validate();
   }
 
-  // =======================================================
-  // REMOVER SKILL
-  // =======================================================
   void _removeSkill(int index) {
     titles[index].dispose();
     descriptions[index].dispose();
@@ -132,9 +123,6 @@ class _EditSoftSkillsScreenState
     _validate();
   }
 
-  // =======================================================
-  // SALVAR
-  // =======================================================
   Future<void> _save() async {
     final updated = List.generate(
       titles.length,
@@ -187,6 +175,7 @@ class _EditSoftSkillsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               SvgPicture.asset(
@@ -203,6 +192,7 @@ class _EditSoftSkillsScreenState
                               ),
                             ],
                           ),
+                          const SizedBox(height: 8),
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
@@ -259,9 +249,6 @@ class _EditSoftSkillsScreenState
     );
   }
 
-  // =======================================================
-  // ITEM DE SKILL
-  // =======================================================
   Widget _skillItem(int index) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,9 +295,6 @@ class _EditSoftSkillsScreenState
     );
   }
 
-  // =======================================================
-  // INPUT PADRÃO COM CONTADOR
-  // =======================================================
   Widget _inputField({
     required TextEditingController controller,
     required String hint,
@@ -325,6 +309,7 @@ class _EditSoftSkillsScreenState
       maxLines: null,
       maxLength: maxLength,
       keyboardType: TextInputType.multiline,
+      textAlign: TextAlign.justify, // 🔥 AQUI
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,

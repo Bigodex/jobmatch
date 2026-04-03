@@ -1,5 +1,5 @@
 // =======================================================
-// EDIT HARD SKILLS SCREEN (CORRIGIDO)
+// EDIT HARD SKILLS SCREEN (VALIDAÇÃO INLINE)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/core/utils/validators.dart';
 
 import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
@@ -37,6 +38,13 @@ class _EditHardSkillsScreenState
   late List<List<String>> tools;
   late List<TextEditingController> techControllers;
 
+  // ===================================================
+  // VALIDAÇÃO
+  // ===================================================
+  String? skillsError;
+  bool isValid = true;
+  bool hasChanged = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,23 +65,49 @@ class _EditHardSkillsScreenState
       widget.skills.length,
       (_) => TextEditingController(),
     );
+
+    _validate(); // 🔥 inicial
   }
 
-  // =======================================================
-  // ADD SKILL
-  // =======================================================
+  // ===================================================
+  // VALIDATE
+  // ===================================================
+  void _validate() {
+    final updated = List.generate(
+      titles.length,
+      (index) => TechSkillModel(
+        title: titles[index].text.trim(),
+        level: levels[index].toInt(),
+        tools: tools[index],
+      ),
+    );
+
+    skillsError = AppValidators.validateHardSkills(updated);
+
+    hasChanged = AppValidators.hasHardSkillsChanged(
+      widget.skills,
+      updated,
+    );
+
+    isValid = skillsError == null;
+
+    setState(() {});
+  }
+
+  // ===================================================
+  // ADD / REMOVE
+  // ===================================================
   void _addSkill() {
     setState(() {
       titles.add(TextEditingController());
-      levels.add(50); // default intermediário
+      levels.add(50);
       tools.add([]);
       techControllers.add(TextEditingController());
     });
+
+    _validate();
   }
 
-  // =======================================================
-  // REMOVE SKILL
-  // =======================================================
   void _removeSkill(int index) {
     setState(() {
       titles.removeAt(index);
@@ -81,11 +115,10 @@ class _EditHardSkillsScreenState
       tools.removeAt(index);
       techControllers.removeAt(index);
     });
+
+    _validate();
   }
 
-  // =======================================================
-  // ADD TOOL
-  // =======================================================
   void _addTool(int index) {
     final value = techControllers[index].text.trim();
     if (value.isEmpty) return;
@@ -94,22 +127,26 @@ class _EditHardSkillsScreenState
       tools[index].add(value);
       techControllers[index].clear();
     });
+
+    _validate();
   }
 
   void _removeTool(int index, String tool) {
     setState(() {
       tools[index].remove(tool);
     });
+
+    _validate();
   }
 
-  // =======================================================
+  // ===================================================
   // SAVE
-  // =======================================================
+  // ===================================================
   Future<void> _save() async {
     final updated = List.generate(
       titles.length,
       (index) => TechSkillModel(
-        title: titles[index].text,
+        title: titles[index].text.trim(),
         level: levels[index].toInt(),
         tools: tools[index],
       ),
@@ -117,6 +154,8 @@ class _EditHardSkillsScreenState
 
     await ref.read(profileProvider.notifier)
         .updateHardSkills(updated);
+
+    if (!mounted) return;
 
     Navigator.pushReplacement(
       context,
@@ -155,8 +194,7 @@ class _EditHardSkillsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
-                          // HEADER
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               SvgPicture.asset(
@@ -173,13 +211,16 @@ class _EditHardSkillsScreenState
                               ),
                             ],
                           ),
-
+                          const SizedBox(height: 8),
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),
 
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
 
+                          // ===================================================
+                          // LISTA
+                          // ===================================================
                           Column(
                             children: List.generate(titles.length, (index) {
                               return Column(
@@ -195,6 +236,21 @@ class _EditHardSkillsScreenState
                             }),
                           ),
 
+                          // ===================================================
+                          // ERRO GLOBAL (🔥 IGUAL LANGUAGES)
+                          // ===================================================
+                          if (skillsError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                skillsError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+
                           const SizedBox(height: 16),
 
                           TextButton.icon(
@@ -205,10 +261,16 @@ class _EditHardSkillsScreenState
 
                           const SizedBox(height: 20),
 
+                          // ===================================================
+                          // BOTÃO INTELIGENTE
+                          // ===================================================
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: _save,
+                              onPressed:
+                                  (isValid && hasChanged)
+                                      ? _save
+                                      : null,
                               child: const Text('Salvar'),
                             ),
                           ),
@@ -225,9 +287,9 @@ class _EditHardSkillsScreenState
     );
   }
 
-  // =======================================================
+  // ===================================================
   // ITEM
-  // =======================================================
+  // ===================================================
   Widget _skillItem(int index) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,7 +298,7 @@ class _EditHardSkillsScreenState
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Skill'),
+            const Text('Habilidade'),
             IconButton(
               onPressed: () => _removeSkill(index),
               icon: const Icon(Icons.delete, size: 18),
@@ -249,11 +311,11 @@ class _EditHardSkillsScreenState
         _inputField(
           controller: titles[index],
           hint: 'Ex: Flutter',
+          onChanged: (_) => _validate(),
         ),
 
         const SizedBox(height: 12),
 
-        // 🔥 SLIDER NÍVEL
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -265,6 +327,7 @@ class _EditHardSkillsScreenState
               divisions: 4,
               onChanged: (value) {
                 setState(() => levels[index] = value);
+                _validate();
               },
             ),
           ],
@@ -290,7 +353,7 @@ class _EditHardSkillsScreenState
             Expanded(
               child: _inputField(
                 controller: techControllers[index],
-                hint: 'Adicionar tecnologia',
+                hint: 'Adicionar Tag',
               ),
             ),
             IconButton(
@@ -306,11 +369,13 @@ class _EditHardSkillsScreenState
   Widget _inputField({
     required TextEditingController controller,
     required String hint,
+    Function(String)? onChanged,
   }) {
     final theme = Theme.of(context);
 
     return TextField(
       controller: controller,
+      onChanged: onChanged,
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
         hintText: hint,

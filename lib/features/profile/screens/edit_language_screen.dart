@@ -4,6 +4,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:jobmatch/core/constants/app_icons.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/utils/validators.dart'; // 🔥 NOVO
@@ -18,18 +20,13 @@ import 'package:jobmatch/shared/widgets/app_section_card.dart';
 class EditLanguageScreen extends ConsumerStatefulWidget {
   final List<LanguageModel> languages;
 
-  const EditLanguageScreen({
-    super.key,
-    required this.languages,
-  });
+  const EditLanguageScreen({super.key, required this.languages});
 
   @override
-  ConsumerState<EditLanguageScreen> createState() =>
-      _EditLanguageScreenState();
+  ConsumerState<EditLanguageScreen> createState() => _EditLanguageScreenState();
 }
 
 class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
-
   late List<LanguageModel> _edited;
 
   // ===================================================
@@ -53,11 +50,7 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
     super.initState();
 
     _edited = widget.languages
-        .map((e) => LanguageModel(
-              name: e.name,
-              flag: e.flag,
-              level: e.level,
-            ))
+        .map((e) => LanguageModel(name: e.name, flag: e.flag, level: e.level))
         .toList();
 
     _validate(); // 🔥 inicial
@@ -67,13 +60,9 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
   // VALIDAÇÃO GLOBAL
   // ===================================================
   void _validate() {
-    languagesError =
-        AppValidators.validateLanguagesFull(_edited);
+    languagesError = AppValidators.validateLanguagesFull(_edited);
 
-    hasChanged = AppValidators.hasLanguagesChanged(
-      widget.languages,
-      _edited,
-    );
+    hasChanged = AppValidators.hasLanguagesChanged(widget.languages, _edited);
 
     isValid = languagesError == null;
 
@@ -90,9 +79,7 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => const SuccessScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const SuccessScreen()),
     );
   }
 
@@ -145,9 +132,13 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
   // LABEL
   // ===================================================
   String _getLevelLabel(int value) {
-    if (value <= 33) return 'Iniciante';
-    if (value <= 66) return 'Intermediário';
-    return 'Avançado';
+    if (value == 100) return 'Nativo';
+    if (value >= 90) return 'Expert';
+    if (value >= 61) return 'Avançado';
+    if (value >= 40) return 'Intermediário';
+    if (value >= 21) return 'Iniciante';
+    if (value >= 10) return 'Básico';
+    return 'Muito baixo';
   }
 
   @override
@@ -158,13 +149,9 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
     return Scaffold(
       body: Column(
         children: [
-
           const SafeArea(
             bottom: false,
-            child: AppHeader(
-              title: 'Editar',
-              showBackButton: true,
-            ),
+            child: AppHeader(title: 'Editar', showBackButton: true),
           ),
 
           Expanded(
@@ -183,17 +170,26 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
-                          const Text(
-                            'Idiomas',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              SvgPicture.asset(
+                                AppIcons.language,
+                                width: 18,
+                                height: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Idiomas',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-
-                          Divider(
-                            color: theme.dividerColor.withOpacity(0.2),
-                          ),
+                          const SizedBox(height: 8),
+                          Divider(color: theme.dividerColor.withOpacity(0.2)),
 
                           const SizedBox(height: 12),
 
@@ -211,7 +207,9 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
                                   if (index != _edited.length - 1)
                                     Divider(
                                       height: 24,
-                                      color: theme.dividerColor.withOpacity(0.2),
+                                      color: theme.dividerColor.withOpacity(
+                                        0.2,
+                                      ),
                                     ),
                                 ],
                               );
@@ -249,10 +247,7 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed:
-                                  (isValid && hasChanged)
-                                      ? _save
-                                      : null,
+                              onPressed: (isValid && hasChanged) ? _save : null,
                               child: const Text('Salvar'),
                             ),
                           ),
@@ -278,7 +273,6 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -298,11 +292,13 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
 
         const SizedBox(height: 12),
 
+        // 🔥 SLIDER DE 5 EM 5
         Slider(
           value: lang.level.toDouble(),
           min: 0,
           max: 100,
-          divisions: 100,
+          divisions: 20, // 100 / 5 = 20 divisões
+          label: '${lang.level}%', // opcional (mostra ao arrastar)
           onChanged: (value) {
             setState(() {
               _edited[index] = LanguageModel(

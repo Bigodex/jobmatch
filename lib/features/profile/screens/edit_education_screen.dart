@@ -147,7 +147,7 @@ class _EditEducationScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
+                          const SizedBox(height: 8),
                           // HEADER
                           Row(
                             children: [
@@ -165,7 +165,7 @@ class _EditEducationScreenState
                               ),
                             ],
                           ),
-
+                          const SizedBox(height: 8),
                           Divider(
                             color: theme.dividerColor.withOpacity(0.2),
                           ),

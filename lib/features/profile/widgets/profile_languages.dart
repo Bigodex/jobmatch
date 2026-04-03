@@ -1,7 +1,5 @@
 // =======================================================
-// PROFILE LANGUAGES
-// -------------------------------------------------------
-// Agora conectado ao LanguageModel (dados dinâmicos)
+// PROFILE LANGUAGES (LISTA PREMIUM)
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -16,6 +14,19 @@ class ProfileLanguages extends StatelessWidget {
   final List<LanguageModel> languages;
 
   const ProfileLanguages({super.key, required this.languages});
+
+  // ===================================================
+  // LABEL (MESMA REGRA DO EDIT)
+  // ===================================================
+  String _getLevelLabel(int value) {
+    if (value == 100) return 'Nativo';
+    if (value >= 90) return 'Expert';
+    if (value >= 61) return 'Avançado';
+    if (value >= 40) return 'Intermediário';
+    if (value >= 21) return 'Iniciante';
+    if (value >= 10) return 'Básico';
+    return 'Muito baixo';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +44,7 @@ class ProfileLanguages extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             // ===================================================
             // HEADER
             // ===================================================
@@ -68,24 +80,33 @@ class ProfileLanguages extends StatelessWidget {
               ],
             ),
 
-            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+            Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 12),
 
             // ===================================================
-            // LISTA DINÂMICA
+            // LISTA (🔥 NOVO DESIGN)
             // ===================================================
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: languages
-                  .map(
-                    (lang) => _LanguageChip(
+            Column(
+              children: List.generate(languages.length, (index) {
+                final lang = languages[index];
+
+                return Column(
+                  children: [
+                    _LanguageItem(
                       flag: lang.flag,
-                      label: lang.name,
-                      level: '${lang.level}%',
+                      name: lang.name,
+                      percent: lang.level,
+                      levelLabel: _getLevelLabel(lang.level),
                     ),
-                  )
-                  .toList(),
+
+                    if (index != languages.length - 1)
+                      Divider(
+                        height: 20,
+                        color: theme.dividerColor.withOpacity(0.2),
+                      ),
+                  ],
+                );
+              }),
             ),
           ],
         ),
@@ -95,44 +116,82 @@ class ProfileLanguages extends StatelessWidget {
 }
 
 // =======================================================
-// LANGUAGE CHIP
+// ITEM DE IDIOMA (🔥 NOVO)
 // =======================================================
 
-class _LanguageChip extends StatelessWidget {
+class _LanguageItem extends StatelessWidget {
   final String flag;
-  final String label;
-  final String level;
+  final String name;
+  final int percent;
+  final String levelLabel;
 
-  const _LanguageChip({
+  const _LanguageItem({
     required this.flag,
-    required this.label,
-    required this.level,
+    required this.name,
+    required this.percent,
+    required this.levelLabel,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.cardTertiary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // BANDEIRA
-          Text(flag, style: const TextStyle(fontSize: 18)),
+    return Row(
+      children: [
 
-          const SizedBox(width: 8),
+        // ===================================================
+        // FLAG
+        // ===================================================
+        Text(
+          flag,
+          style: const TextStyle(fontSize: 22),
+        ),
 
-          // TEXTO
-          Text('$label | $level', style: const TextStyle(fontSize: 14)),
-        ],
-      ),
+        const SizedBox(width: 12),
+
+        // ===================================================
+        // NAME + LEVEL
+        // ===================================================
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // Nome
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              const SizedBox(height: 2),
+
+              // Nível
+              Text(
+                levelLabel,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // ===================================================
+        // PORCENTAGEM
+        // ===================================================
+        Text(
+          '$percent%',
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

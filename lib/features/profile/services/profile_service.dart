@@ -1,10 +1,11 @@
 // =======================================================
 // PROFILE SERVICE
 // -------------------------------------------------------
-// Backend real com Firebase
+// Backend real com Firebase (MULTIUSER CORRETO)
 // =======================================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/profile_model.dart';
 import '../models/user_model.dart';
@@ -18,18 +19,27 @@ import '../models/social_link_model.dart';
 
 class ProfileService {
   final _firestore = FirebaseFirestore.instance;
-
-  // 👇 CENTRALIZA ID (IMPORTANTE)
-  final String _profileId = 'S0izTate1BROQEV81Ct4';
+  final _auth = FirebaseAuth.instance;
 
   // =======================================================
-  // GET PROFILE (FIREBASE)
+  // GET UID
+  // =======================================================
+  String get _uid {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Usuário não autenticado');
+    }
+    return user.uid;
+  }
+
+  // =======================================================
+  // GET PROFILE
   // =======================================================
   Future<ProfileModel> getProfile() async {
     try {
       final doc = await _firestore
           .collection('profiles')
-          .doc(_profileId)
+          .doc(_uid) // 🔥 AGORA É POR USUÁRIO
           .get();
 
       if (!doc.exists || doc.data() == null) {
@@ -87,14 +97,54 @@ class ProfileService {
   }
 
   // =======================================================
-  // UPDATE PROFILE (🔥 AGORA REAL)
+  // CREATE PROFILE (🔥 NOVO)
+  // =======================================================
+  Future<void> createProfile() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('Usuário não autenticado');
+
+      final docRef = _firestore.collection('profiles').doc(user.uid);
+
+      final exists = await docRef.get();
+
+      if (exists.exists) return; // 👈 não recria
+
+      await docRef.set({
+        'user': {
+          'name': '',
+          'role': '',
+          'avatarUrl': '',
+          'coverUrl': '',
+        },
+        'resume': {
+          'city': '',
+          'description': '',
+          'birthDate': null,
+        },
+        'languages': [],
+        'softSkills': [],
+        'techSkills': [],
+        'experiences': [],
+        'education': [],
+        'links': [],
+      });
+
+      print('✅ PROFILE CRIADO!');
+    } catch (e) {
+      print('❌ ERRO AO CRIAR PROFILE: $e');
+      rethrow;
+    }
+  }
+
+  // =======================================================
+  // UPDATE PROFILE
   // =======================================================
   Future<void> updateProfile(ProfileModel profile) async {
     try {
       final data = {
         'user': profile.user.toMap(),
         'resume': profile.resume.toMap(),
-
         'languages': profile.languages.map((e) => e.toMap()).toList(),
         'softSkills': profile.softSkills.map((e) => e.toMap()).toList(),
         'techSkills': profile.techSkills.map((e) => e.toMap()).toList(),
@@ -103,15 +153,12 @@ class ProfileService {
         'links': profile.links.map((e) => e.toMap()).toList(),
       };
 
-      print('💾 SALVANDO PROFILE NO FIREBASE...');
-      print('👉 COVER: ${profile.user.coverUrl}');
-
       await _firestore
           .collection('profiles')
-          .doc(_profileId)
-          .update(data);
+          .doc(_uid) // 🔥 AGORA CORRETO
+          .set(data, SetOptions(merge: true));
 
-      print('✅ PROFILE ATUALIZADO COM SUCESSO!');
+      print('✅ PROFILE ATUALIZADO!');
     } catch (e) {
       print('❌ ERRO AO ATUALIZAR PROFILE: $e');
       rethrow;
