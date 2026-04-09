@@ -3,6 +3,7 @@
 // =======================================================
 
 import 'package:go_router/go_router.dart';
+import 'package:jobmatch/features/menu/screens/menu_screen.dart';
 
 // =======================================================
 // MODELS
@@ -24,19 +25,19 @@ import 'package:jobmatch/features/profile/models/social_link_model.dart';
 import '../../features/intro/screens/intro_screen.dart';
 import '../../features/intro/screens/welcome_screen.dart';
 
-// 🔥 AUTH
+// AUTH
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 
-// 🔥 ONBOARDING (NOVO)
+// ONBOARDING
 import '../../features/onboarding/screens/onboarding_flow_screen.dart';
 
-// Home / Chat / Profile
+// Home / Chat / Profile / Menu
 import '../../features/home/screens/home_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 
-// 🔥 TELAS FULLSCREEN
+// TELAS FULLSCREEN
 import '../../features/profile/screens/edit_resume_screen.dart';
 import '../../features/profile/screens/edit_language_screen.dart';
 import '../../features/profile/screens/edit_soft_skills_screen.dart';
@@ -53,7 +54,6 @@ import 'app_bottom_nav.dart';
 // =======================================================
 
 final GoRouter appRouter = GoRouter(
-
   // -----------------------------------------------------
   // ROTA INICIAL
   // -----------------------------------------------------
@@ -63,7 +63,6 @@ final GoRouter appRouter = GoRouter(
   // ROTAS
   // -----------------------------------------------------
   routes: [
-
     // ==================================================
     // INTRO
     // ==================================================
@@ -97,13 +96,23 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ==================================================
-    // 🔥 ONBOARDING (NOVO)
+    // ONBOARDING
     // ==================================================
 
     GoRoute(
       path: '/onboarding',
       name: 'onboarding',
       builder: (context, state) => const OnboardingFlowScreen(),
+    ),
+
+    // ==================================================
+    // MENU / FULLSCREEN
+    // ==================================================
+
+    GoRoute(
+      path: '/menu',
+      name: 'menu',
+      builder: (context, state) => const MenuScreen(),
     ),
 
     // ==================================================
@@ -182,7 +191,6 @@ final GoRouter appRouter = GoRouter(
         return AppBottomNav(child: child);
       },
       routes: [
-
         GoRoute(
           path: '/home',
           name: 'home',

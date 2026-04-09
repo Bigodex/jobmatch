@@ -64,13 +64,29 @@ class OnboardingLayout extends StatelessWidget {
   String _getTextByStep(int step) {
     switch (step) {
       case 0:
-        return 'Bora lá! Qual o seu nome?';
+        return 'Bora lá! Pode me passar alguns \ndados pessoais?';
       case 1:
-        return 'E quando você nasceu?';
+        return 'Qual a sua especialidade?';
       case 2:
-        return 'Qual sua especialidade?';
+        return 'Você fala mais de 1 idioma?';
       case 3:
-        return 'E por último, quais idiomas \nvocê fala?';
+        return 'Agora por fim seu e-mail \ne senha!';
+      case 4:
+        return 'E ai, quer finalizar as \ninformações do perfil?';
+      case 5:
+        return 'Show! Fala onde você mora e \nconta mais sobre você!';
+      case 6:
+        return 'As habilidades comportamentais \nsão muito importantes.';
+      case 7:
+        return 'Agora suas habilidades técnicas \nlinguagens, tecnologias e afins.';
+      case 8:
+        return 'Coloque suas melhores \nexperiências.';
+      case 9:
+        return 'Já é formado? Está cursando algo?.';
+      case 10:
+        return 'Coloque links para facilitar \ncontatos se desejar.';
+      case 11:
+        return 'Checklist de Cadastro aqui pra tu.';
       default:
         return '';
     }

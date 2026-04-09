@@ -70,8 +70,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const Text(
                   'Criar conta',
                   style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 28,  
                   ),
                 ),
 

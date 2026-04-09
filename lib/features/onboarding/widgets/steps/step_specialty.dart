@@ -69,11 +69,11 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
       case 'QA Engineer':
         return AppIcons.shield;
       case 'Product Manager':
-        return AppIcons.briefcase;
+        return AppIcons.box;
       case 'Data Analyst':
         return AppIcons.data;
       case 'Mobile Developer':
-        return AppIcons.laptop;
+        return AppIcons.mobile;
       case 'DevOps Engineer':
         return AppIcons.devops;
       default:
@@ -95,7 +95,7 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
             'Ei 😅 você só pode escolher \naté 3 especialidades.',
           );
 
-          Future.delayed(const Duration(seconds: 3), () {
+          Future.delayed(const Duration(seconds: 6), () {
             if (mounted) {
               widget.onJobuMessageChange(null);
             }
@@ -154,20 +154,26 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
                       children: [
                         SvgPicture.asset(
                           AppIcons.briefcase,
-                          width: 16,
-                          height: 16,
+                          width: 20,
+                          height: 20,
                         ),
                         const SizedBox(width: 10),
                         const Text(
-                          'Especialidade (até 3)',
+                          'Especialidade',
                           style: TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                             color: AppTheme.textPrimary,
                           ),
                         ),
                       ],
                     ),
 
+                    const SizedBox(height: 12),
+                    Divider(
+                      color: Colors.white.withOpacity(0.08),
+                      height: 1,
+                    ),
                     const SizedBox(height: 16),
 
                     Column(

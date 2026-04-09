@@ -1,5 +1,11 @@
 // =======================================================
-// STEP LANGUAGES (SEM MODEL LOCAL - FINAL)
+// STEP LANGUAGES
+// -------------------------------------------------------
+// Idiomas do onboarding
+// - Mais idiomas
+// - Bandeiras persistidas no model
+// - Sem atualizar provider no initState
+// - Validação Jobu para nível muito baixo
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -17,10 +23,12 @@ import 'package:jobmatch/features/profile/models/language_model.dart';
 
 class StepLanguages extends ConsumerStatefulWidget {
   final VoidCallback onNext;
+  final Function(String?) onJobuMessageChange;
 
   const StepLanguages({
     super.key,
     required this.onNext,
+    required this.onJobuMessageChange,
   });
 
   @override
@@ -28,22 +36,33 @@ class StepLanguages extends ConsumerStatefulWidget {
 }
 
 class _StepLanguagesState extends ConsumerState<StepLanguages> {
-
   final Map<String, String> _languagesMap = {
     'Português': '🇧🇷',
     'Inglês': '🇺🇸',
     'Espanhol': '🇪🇸',
     'Francês': '🇫🇷',
     'Alemão': '🇩🇪',
+    'Italiano': '🇮🇹',
+    'Japonês': '🇯🇵',
+    'Coreano': '🇰🇷',
+    'Chinês': '🇨🇳',
+    'Russo': '🇷🇺',
+    'Árabe': '🇸🇦',
+    'Hindi': '🇮🇳',
+    'Turco': '🇹🇷',
+    'Holandês': '🇳🇱',
+    'Sueco': '🇸🇪',
+    'Polonês': '🇵🇱',
+    'Ucraniano': '🇺🇦',
+    'Grego': '🇬🇷',
+    'Hebraico': '🇮🇱',
+    'Tailandês': '🇹🇭',
   };
 
   late List<LanguageModel> _languages;
 
   bool get _isValid => _languages.isNotEmpty;
 
-  // ===================================================
-  // INIT (SEM MEXER NO PROVIDER)
-  // ===================================================
   @override
   void initState() {
     super.initState();
@@ -51,39 +70,40 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     final data = ref.read(onboardingProvider);
 
     if (data.languages.isNotEmpty) {
-      _languages = List.from(data.languages);
+      _languages = List<LanguageModel>.from(data.languages);
     } else {
-      // default visual
       _languages = [
         LanguageModel(
           name: 'Português',
           level: 100,
-          flag: '',
+          flag: _languagesMap['Português'] ?? '🇧🇷',
         ),
       ];
     }
   }
 
-  // ===================================================
-  // SYNC
-  // ===================================================
   void _sync() {
     ref.read(onboardingProvider.notifier).setLanguages(
-      List.from(_languages),
-    );
+          List<LanguageModel>.from(_languages),
+        );
   }
 
-  // ===================================================
-  // ADD
-  // ===================================================
   void _addLanguage() async {
     final selected = await showModalBottomSheet<String>(
       context: context,
       builder: (_) {
+        final availableLanguages = _languagesMap.keys
+            .where((name) => !_languages.any((e) => e.name == name))
+            .toList();
+
         return ListView(
           padding: const EdgeInsets.all(16),
-          children: _languagesMap.keys.map((name) {
+          children: availableLanguages.map((name) {
             return ListTile(
+              leading: Text(
+                _languagesMap[name] ?? '🌍',
+                style: const TextStyle(fontSize: 20),
+              ),
               title: Text(name),
               onTap: () => Navigator.pop(context, name),
             );
@@ -100,7 +120,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
           LanguageModel(
             name: selected,
             level: 50,
-            flag: '',
+            flag: _languagesMap[selected] ?? '🌍',
           ),
         );
       });
@@ -109,9 +129,6 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     }
   }
 
-  // ===================================================
-  // REMOVE
-  // ===================================================
   void _removeLanguage(int index) {
     if (_languages[index].name == 'Português') return;
 
@@ -122,24 +139,38 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     _sync();
   }
 
-  // ===================================================
-  // UPDATE LEVEL
-  // ===================================================
   void _updateLevel(int index, int value) {
+    final current = _languages[index];
+
     setState(() {
       _languages[index] = LanguageModel(
-        name: _languages[index].name,
+        name: current.name,
         level: value,
-        flag: '',
+        flag: current.flag,
       );
     });
 
     _sync();
   }
 
-  // ===================================================
-  // LABEL
-  // ===================================================
+  void _continue() {
+    final invalidLanguage = _languages.cast<LanguageModel?>().firstWhere(
+          (lang) => lang != null && (lang.level == 0 || lang.level == 5),
+          orElse: () => null,
+        );
+
+    if (invalidLanguage != null) {
+      widget.onJobuMessageChange(
+        'Nível de idioma "${invalidLanguage.name}" \nmuito baixo.',
+      );
+      return;
+    }
+
+    widget.onJobuMessageChange(null);
+    _sync();
+    widget.onNext();
+  }
+
   String _getLevelLabel(int value) {
     if (value == 100) return 'Nativo';
     if (value >= 90) return 'Expert';
@@ -150,8 +181,9 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     return 'Muito baixo';
   }
 
-  String _getFlag(String name) {
-    return _languagesMap[name] ?? '🌍';
+  String _getFlag(LanguageModel lang) {
+    if (lang.flag.trim().isNotEmpty) return lang.flag;
+    return _languagesMap[lang.name] ?? '🌍';
   }
 
   @override
@@ -162,9 +194,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     return SingleChildScrollView(
       child: Column(
         children: [
-
           const SizedBox(height: 24),
-
           AppSectionCard(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -175,18 +205,28 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        SvgPicture.asset(AppIcons.language, width: 16),
+                        SvgPicture.asset(AppIcons.language, width: 20),
                         const SizedBox(width: 10),
-                        const Text('Idiomas'),
+                        const Text(
+                          'Idiomas',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
                       ],
                     ),
-
                     const SizedBox(height: 12),
-
+                    Divider(
+                      color: Colors.white.withOpacity(0.08),
+                      height: 1,
+                    ),
+                    const SizedBox(height: 16),
                     Column(
                       children: List.generate(_languages.length, (index) {
                         final lang = _languages[index];
@@ -195,31 +235,22 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
                           children: [
                             _item(lang, index),
                             if (index != _languages.length - 1)
-                              Divider(height: 24),
+                              const Divider(height: 24),
                           ],
                         );
                       }),
                     ),
-
                     const SizedBox(height: 16),
-
                     TextButton.icon(
                       onPressed: _addLanguage,
                       icon: const Icon(Icons.add),
                       label: const Text('Adicionar idioma'),
                     ),
-
                     const SizedBox(height: 20),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isValid
-                            ? () {
-                                _sync();
-                                widget.onNext();
-                              }
-                            : null,
+                        onPressed: _isValid ? _continue : null,
                         child: const Text('Continuar'),
                       ),
                     ),
@@ -239,13 +270,15 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
-                Text(_getFlag(lang.name), style: const TextStyle(fontSize: 20)),
+                Text(
+                  _getFlag(lang),
+                  style: const TextStyle(fontSize: 20),
+                ),
                 const SizedBox(width: 8),
                 Text(lang.name),
               ],
@@ -257,9 +290,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
               ),
           ],
         ),
-
         const SizedBox(height: 12),
-
         Slider(
           value: lang.level.toDouble(),
           min: 0,
@@ -269,13 +300,14 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
             _updateLevel(index, value.toInt());
           },
         ),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               _getLevelLabel(lang.level),
-              style: TextStyle(color: theme.colorScheme.primary),
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+              ),
             ),
             Text('${lang.level}%'),
           ],

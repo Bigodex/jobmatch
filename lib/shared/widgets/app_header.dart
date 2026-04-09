@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 
 import '../../core/constants/app_icons.dart';
@@ -18,7 +19,9 @@ class AppHeader extends StatelessWidget {
   final VoidCallback? onMenuTap;
   final VoidCallback? onActionTap;
 
-  // 🔥 NOVO
+  // ===================================================
+  // NOVO
+  // ===================================================
   final bool showBackButton;
 
   const AppHeader({
@@ -26,7 +29,7 @@ class AppHeader extends StatelessWidget {
     required this.title,
     this.onMenuTap,
     this.onActionTap,
-    this.showBackButton = false, // default mantém comportamento atual
+    this.showBackButton = false,
   });
 
   @override
@@ -45,11 +48,20 @@ class AppHeader extends StatelessWidget {
           // ===================================================
           // LEFT ICON (MENU OU BACK)
           // ===================================================
-
           GestureDetector(
-            onTap: showBackButton
-                ? () => Navigator.pop(context)
-                : onMenuTap,
+            onTap: () {
+              if (showBackButton) {
+                Navigator.pop(context);
+                return;
+              }
+
+              if (onMenuTap != null) {
+                onMenuTap!.call();
+                return;
+              }
+
+              context.push('/menu');
+            },
             child: SvgPicture.asset(
               showBackButton ? AppIcons.arrowleft : AppIcons.burger,
               width: 22,
@@ -66,7 +78,6 @@ class AppHeader extends StatelessWidget {
           // ===================================================
           // TITLE
           // ===================================================
-
           Text(
             title,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -79,7 +90,6 @@ class AppHeader extends StatelessWidget {
           // ===================================================
           // ACTION ICON
           // ===================================================
-
           GestureDetector(
             onTap: onActionTap,
             child: SvgPicture.asset(

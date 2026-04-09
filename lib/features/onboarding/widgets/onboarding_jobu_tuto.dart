@@ -132,7 +132,10 @@ class _JobuTutoState extends State<JobuTuto> {
       final lower = word.toLowerCase();
 
       final isHighlight =
-          lower.contains('nome') || lower.contains('nasceu') || lower.contains('especialidade') || lower.contains('idiomas');
+          lower.contains('nome') || lower.contains('nasceu') || lower.contains('especialidade') || lower.contains('idioma') || lower.contains('e-mail') 
+          || lower.contains('senha') || lower.contains('perfil') || lower.contains('dados') || lower.contains('pessoais') || lower.contains('mora') || lower.contains('sobre')
+          || lower.contains('habilidades') || lower.contains('comportamentais') || lower.contains('cidade') || lower.contains('resumo') || lower.contains('habilidade') || lower.contains('técnicas')
+          || lower.contains('data') || lower.contains('nascimento') || lower.contains('experiências');
 
       return TextSpan(
         text: '$word ',

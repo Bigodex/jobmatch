@@ -34,7 +34,7 @@ class _IntroScreenState extends State<IntroScreen> {
         _controller.play();
 
         // ⚡ VELOCIDADE (1.0 = normal)
-        _controller.setPlaybackSpeed(1.0);
+        _controller.setPlaybackSpeed(2.0);
 
         // 🔁 LISTENER
         _controller.addListener(_videoListener);

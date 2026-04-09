@@ -6,9 +6,17 @@
 
 enum OnboardingStep {
   name,
-  birthDate,
   specialty,
   languages,
+  account,
+  profileIntro,
+  resume,
+  softSkills,
+  hardSkills,
+  experience,
+  education,
+  links,
+  checklist,
 }
 
 // =======================================================
@@ -16,7 +24,6 @@ enum OnboardingStep {
 // =======================================================
 
 extension OnboardingStepExtension on OnboardingStep {
-
   // ===================================================
   // PRÓXIMO STEP
   // ===================================================
@@ -25,7 +32,7 @@ extension OnboardingStepExtension on OnboardingStep {
     final nextIndex = index + 1;
 
     if (nextIndex >= steps.length) {
-      return this; // 👈 permanece no último
+      return this;
     }
 
     return steps[nextIndex];
@@ -38,7 +45,7 @@ extension OnboardingStepExtension on OnboardingStep {
     final prevIndex = index - 1;
 
     if (prevIndex < 0) {
-      return this; // 👈 permanece no primeiro
+      return this;
     }
 
     return OnboardingStep.values[prevIndex];
