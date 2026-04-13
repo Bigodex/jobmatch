@@ -44,7 +44,6 @@ class ProfileLanguages extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ===================================================
             // HEADER
             // ===================================================
@@ -64,7 +63,6 @@ class ProfileLanguages extends StatelessWidget {
                     ),
                   ],
                 ),
-
                 IconButton(
                   onPressed: () {
                     Navigator.push(
@@ -81,10 +79,10 @@ class ProfileLanguages extends StatelessWidget {
             ),
 
             Divider(color: theme.dividerColor.withOpacity(0.2)),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
 
             // ===================================================
-            // LISTA (🔥 NOVO DESIGN)
+            // LISTA
             // ===================================================
             Column(
               children: List.generate(languages.length, (index) {
@@ -98,7 +96,6 @@ class ProfileLanguages extends StatelessWidget {
                       percent: lang.level,
                       levelLabel: _getLevelLabel(lang.level),
                     ),
-
                     if (index != languages.length - 1)
                       Divider(
                         height: 20,
@@ -116,7 +113,7 @@ class ProfileLanguages extends StatelessWidget {
 }
 
 // =======================================================
-// ITEM DE IDIOMA (🔥 NOVO)
+// ITEM DE IDIOMA
 // =======================================================
 
 class _LanguageItem extends StatelessWidget {
@@ -138,13 +135,46 @@ class _LanguageItem extends StatelessWidget {
 
     return Row(
       children: [
-
         // ===================================================
-        // FLAG
+        // FLAG + BADGE OK
         // ===================================================
-        Text(
-          flag,
-          style: const TextStyle(fontSize: 22),
+        SizedBox(
+          width: 34,
+          height: 30,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: 0,
+                top: 2,
+                child: Text(
+                  flag,
+                  style: const TextStyle(fontSize: 22),
+                ),
+              ),
+              Positioned(
+                right: -2,
+                bottom: -1,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.scaffoldBackgroundColor,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    size: 9,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(width: 12),
@@ -156,8 +186,6 @@ class _LanguageItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // Nome
               Text(
                 name,
                 style: const TextStyle(
@@ -165,10 +193,7 @@ class _LanguageItem extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-
               const SizedBox(height: 2),
-
-              // Nível
               Text(
                 levelLabel,
                 style: TextStyle(

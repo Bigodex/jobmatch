@@ -35,7 +35,6 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-
       body: SafeArea(
         child: Column(
           children: [
@@ -64,7 +63,10 @@ class ProfileScreen extends ConsumerWidget {
                         // RESUMO PROFISSIONAL
                         // ---------------------------------------------
                         AppSectionCard(
-                          child: ProfileResume(resume: profile.resume),
+                          child: ProfileResume(
+                            resume: profile.resume,
+                            email: profile.user.email,
+                          ),
                         ),
 
                         const SizedBox(height: 16),
@@ -112,7 +114,7 @@ class ProfileScreen extends ConsumerWidget {
                         // ---------------------------------------------
                         AppSectionCard(
                           child: ProfileEducation(
-                            educations: profile.education
+                            educations: profile.education,
                           ),
                         ),
 
@@ -134,7 +136,9 @@ class ProfileScreen extends ConsumerWidget {
                 // ===================================================
                 // LOADING
                 // ===================================================
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
 
                 // ===================================================
                 // ERROR

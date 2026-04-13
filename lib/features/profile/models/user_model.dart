@@ -6,6 +6,7 @@
 
 class UserModel {
   final String name;
+  final String email;
   final String role;
   final String avatarUrl;
   final String coverUrl;
@@ -14,6 +15,7 @@ class UserModel {
 
   UserModel({
     required this.name,
+    required this.email,
     required this.role,
     required this.avatarUrl,
     required this.coverUrl,
@@ -27,6 +29,7 @@ class UserModel {
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       name: map['name'] ?? '',
+      email: map['email'] ?? '',
       role: map['role'] ?? '',
       avatarUrl: map['avatarUrl'] ?? '',
       coverUrl: map['coverUrl'] ?? '',
@@ -41,6 +44,7 @@ class UserModel {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
+      'email': email,
       'role': role,
       'avatarUrl': avatarUrl,
       'coverUrl': coverUrl,
@@ -54,6 +58,7 @@ class UserModel {
   // =======================================================
   UserModel copyWith({
     String? name,
+    String? email,
     String? role,
     String? avatarUrl,
     String? coverUrl,
@@ -62,6 +67,7 @@ class UserModel {
   }) {
     return UserModel(
       name: name ?? this.name,
+      email: email ?? this.email,
       role: role ?? this.role,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       coverUrl: coverUrl ?? this.coverUrl,

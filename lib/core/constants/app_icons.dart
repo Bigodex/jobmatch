@@ -43,6 +43,7 @@ class AppIcons {
   static const String house = '${_base}house.svg';
   static const String incomplete = '${_base}incomplete.svg';
   static const String info = '${_base}info.svg';
+  static const String infofull = '${_base}infofull.svg';
   static const String image = '${_base}image.svg';
   static const String id = '${_base}id.svg';
   static const String id2 = '${_base}id_2.svg';

@@ -156,12 +156,29 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
   late final TextEditingController fullName;
   late final TextEditingController birthDate;
   late final TextEditingController cpf;
+  late final FocusNode _birthDateFocusNode;
 
   DateTime? _birthDate;
 
   bool _fullNameHasError = false;
   bool _birthDateHasError = false;
   bool _cpfHasError = false;
+
+  static const Map<String, int> _monthsMap = {
+    'janeiro': 1,
+    'fevereiro': 2,
+    'marco': 3,
+    'março': 3,
+    'abril': 4,
+    'maio': 5,
+    'junho': 6,
+    'julho': 7,
+    'agosto': 8,
+    'setembro': 9,
+    'outubro': 10,
+    'novembro': 11,
+    'dezembro': 12,
+  };
 
   @override
   void initState() {
@@ -175,12 +192,15 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
         ? savedUserDocument.birthDate
         : data.birthDate;
 
+    _birthDateFocusNode = FocusNode();
+    _birthDateFocusNode.addListener(_handleBirthDateFocusChange);
+
     fullName = TextEditingController(
       text: FullNameInputFormatter._toTitleCase(data.fullName),
     );
 
     birthDate = TextEditingController(
-      text: _birthDate != null ? _formatDateInput(_birthDate!) : '',
+      text: _birthDate != null ? _formatDateLong(_birthDate!) : '',
     );
 
     cpf = TextEditingController(text: _formatCpf(savedCpf));
@@ -188,17 +208,70 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
 
   @override
   void dispose() {
+    _birthDateFocusNode.removeListener(_handleBirthDateFocusChange);
+    _birthDateFocusNode.dispose();
     fullName.dispose();
     birthDate.dispose();
     cpf.dispose();
     super.dispose();
   }
 
+  void _handleBirthDateFocusChange() {
+    if (!mounted) return;
+
+    if (_birthDateFocusNode.hasFocus) {
+      _showBirthDateForEditing();
+    } else {
+      _finalizeBirthDateField();
+    }
+  }
+
+  void _showBirthDateForEditing() {
+    if (_birthDate == null) return;
+
+    final formatted = _formatDateInput(_birthDate!);
+
+    if (birthDate.text == formatted) return;
+
+    birthDate.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  void _finalizeBirthDateField() {
+    final rawText = birthDate.text.trim();
+    final parsed = _parseBirthDate(rawText);
+
+    setState(() {
+      _birthDate = parsed;
+
+      if (_birthDateHasError && rawText.isNotEmpty) {
+        _birthDateHasError = parsed == null;
+      }
+    });
+
+    if (parsed != null) {
+      final formatted = _formatDateLong(parsed);
+
+      birthDate.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+        composing: TextRange.empty,
+      );
+
+      ref.read(onboardingProvider.notifier).setBirthDate(parsed);
+    }
+
+    _syncUserDocument();
+  }
+
   // ===================================================
   // GETTERS DE VALIDAÇÃO
   // ===================================================
   bool get _isFullNameValid => _hasNameAndLastName(fullName.text.trim());
-  bool get _isBirthDateValid => _tryParseBirthDate(birthDate.text) != null;
+  bool get _isBirthDateValid => _resolveBirthDateFromField() != null;
   bool get _isCpfValid => _hasCompleteCpf(cpf.text);
 
   // ===================================================
@@ -247,18 +320,45 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
   }
 
   // ===================================================
-  // PARSE DATA
+  // NORMALIZAR TEXTO
   // ===================================================
-  DateTime? _tryParseBirthDate(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+  String _normalizeText(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('ã', 'a')
+        .replaceAll('ä', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('ë', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ì', 'i')
+        .replaceAll('î', 'i')
+        .replaceAll('ï', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ò', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('õ', 'o')
+        .replaceAll('ö', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ù', 'u')
+        .replaceAll('û', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ç', 'c');
+  }
 
-    if (digits.length != 8) return null;
-
-    final day = int.tryParse(digits.substring(0, 2));
-    final month = int.tryParse(digits.substring(2, 4));
-    final year = int.tryParse(digits.substring(4, 8));
-
-    if (day == null || month == null || year == null) return null;
+  // ===================================================
+  // VALIDAR DATA FINAL
+  // ===================================================
+  DateTime? _validateDateParts({
+    required int day,
+    required int month,
+    required int year,
+  }) {
     if (month < 1 || month > 12) return null;
     if (year < 1950) return null;
 
@@ -274,6 +374,83 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
     if (parsed.isAfter(today)) return null;
 
     return parsed;
+  }
+
+  // ===================================================
+  // PARSE DATA NUMÉRICA
+  // ===================================================
+  DateTime? _tryParseBirthDateNumeric(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length != 8) return null;
+
+    final day = int.tryParse(digits.substring(0, 2));
+    final month = int.tryParse(digits.substring(2, 4));
+    final year = int.tryParse(digits.substring(4, 8));
+
+    if (day == null || month == null || year == null) return null;
+
+    return _validateDateParts(
+      day: day,
+      month: month,
+      year: year,
+    );
+  }
+
+  // ===================================================
+  // PARSE DATA POR EXTENSO
+  // Ex: 23 de outubro de 1996
+  // ===================================================
+  DateTime? _tryParseBirthDateLong(String value) {
+    final normalized = _normalizeText(value);
+
+    final match = RegExp(
+      r'^(\d{1,2})\s+de\s+([a-z]+)\s+de\s+(\d{4})$',
+    ).firstMatch(normalized);
+
+    if (match == null) return null;
+
+    final day = int.tryParse(match.group(1) ?? '');
+    final monthName = match.group(2) ?? '';
+    final year = int.tryParse(match.group(3) ?? '');
+
+    if (day == null || year == null) return null;
+
+    final month = _monthsMap[monthName];
+    if (month == null) return null;
+
+    return _validateDateParts(
+      day: day,
+      month: month,
+      year: year,
+    );
+  }
+
+  // ===================================================
+  // PARSE DATA GERAL
+  // ===================================================
+  DateTime? _parseBirthDate(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+
+    final numericParsed = _tryParseBirthDateNumeric(text);
+    if (numericParsed != null) return numericParsed;
+
+    final longParsed = _tryParseBirthDateLong(text);
+    if (longParsed != null) return longParsed;
+
+    return null;
+  }
+
+  DateTime? _resolveBirthDateFromField() {
+    final text = birthDate.text.trim();
+
+    if (text.isEmpty) return null;
+
+    final parsed = _parseBirthDate(text);
+    if (parsed != null) return parsed;
+
+    return _birthDate;
   }
 
   // ===================================================
@@ -318,7 +495,7 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
     ref.read(onboardingProvider.notifier).setUserDocument(doc);
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDateLong(DateTime date) {
     const months = [
       '',
       'janeiro',
@@ -343,7 +520,7 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
   // ===================================================
   void _continue() {
     final fullNameValue = fullName.text.trim();
-    final parsedBirthDate = _tryParseBirthDate(birthDate.text);
+    final parsedBirthDate = _resolveBirthDateFromField();
 
     setState(() {
       _fullNameHasError = !_hasNameAndLastName(fullNameValue);
@@ -477,52 +654,45 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
                     _editItem(
                       icon: AppIcons.cake,
                       title: 'Data de Nascimento',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppValidatedInputField(
-                            controller: birthDate,
-                            hint: 'DD/MM/AAAA',
-                            maxLength: 10,
-                            hasError: _birthDateHasError,
-                            isValid: _isBirthDateValid,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              DateInputFormatter(),
-                            ],
-                            onChanged: (value) {
-                              final parsed = _tryParseBirthDate(value);
-
-                              setState(() {
-                                _birthDate = parsed;
-
-                                if (_birthDateHasError) {
-                                  _birthDateHasError = parsed == null;
-                                }
-                              });
-
-                              if (parsed != null) {
-                                ref
-                                    .read(onboardingProvider.notifier)
-                                    .setBirthDate(parsed);
-                              }
-
-                              _syncUserDocument();
-                              widget.onJobuMessageChange(null);
-                            },
-                          ),
-                          if (_birthDate != null) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              _formatDate(_birthDate!),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.72),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                      child: AppValidatedInputField(
+                        controller: birthDate,
+                        focusNode: _birthDateFocusNode,
+                        hint: 'DD/MM/AAAA',
+                        maxLength: _birthDateFocusNode.hasFocus ? 10 : 30,
+                        hasError: _birthDateHasError,
+                        isValid: _isBirthDateValid,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          DateInputFormatter(),
                         ],
+                        onEditingComplete: () {
+                          _birthDateFocusNode.unfocus();
+                          _finalizeBirthDateField();
+                        },
+                        onTapOutside: (_) {
+                          _birthDateFocusNode.unfocus();
+                          _finalizeBirthDateField();
+                        },
+                        onChanged: (value) {
+                          final parsed = _parseBirthDate(value);
+
+                          setState(() {
+                            _birthDate = parsed;
+
+                            if (_birthDateHasError) {
+                              _birthDateHasError = parsed == null;
+                            }
+                          });
+
+                          if (parsed != null) {
+                            ref
+                                .read(onboardingProvider.notifier)
+                                .setBirthDate(parsed);
+                          }
+
+                          _syncUserDocument();
+                          widget.onJobuMessageChange(null);
+                        },
                       ),
                     ),
 

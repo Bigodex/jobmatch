@@ -5,6 +5,10 @@
 // - normal
 // - erro   -> borda vermelha + exclamação
 // - válido -> borda primary + check
+// -------------------------------------------------------
+// Ajuste:
+// - flecha fica à esquerda
+// - ícone de validação fica à direita da flecha
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -54,6 +58,20 @@ class AppValidatedSelectorField extends StatelessWidget {
     final shouldShowSelectedIcon =
         hasValue && selectedIcon != null && selectedIcon!.isNotEmpty;
 
+    final Widget? validationIcon = hasError
+        ? Icon(
+            Icons.error_outline_rounded,
+            color: errorColor,
+            size: 20,
+          )
+        : isValid
+            ? Icon(
+                Icons.check_circle_rounded,
+                color: primaryColor,
+                size: 20,
+              )
+            : null;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -98,21 +116,6 @@ class AppValidatedSelectorField extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              if (hasError) ...[
-                Icon(
-                  Icons.error_outline_rounded,
-                  color: errorColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-              ] else if (isValid) ...[
-                Icon(
-                  Icons.check_circle_rounded,
-                  color: primaryColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-              ],
               if (isLoading)
                 SizedBox(
                   width: 18,
@@ -128,6 +131,10 @@ class AppValidatedSelectorField extends StatelessWidget {
                   color: enabled ? Colors.white70 : Colors.white30,
                   size: 22,
                 ),
+              if (validationIcon != null) ...[
+                const SizedBox(width: 8),
+                validationIcon,
+              ],
             ],
           ),
         ),

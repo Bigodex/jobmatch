@@ -1,26 +1,35 @@
 // =======================================================
-// ONBOARDING LAYOUT (COM JOBU DINÂMICO)
+// ONBOARDING LAYOUT
 // =======================================================
 
 import 'package:flutter/material.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_header.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_jobu_tuto.dart';
+import 'package:jobmatch/features/onboarding/widgets/onboarding_step.dart';
 
 class OnboardingLayout extends StatelessWidget {
   final Widget child;
 
-  final int currentStep;
+  // ===================================================
+  // PROGRESSO DA BARRA
+  // ===================================================
+  final int progressCurrentStep;
   final int totalSteps;
-  final VoidCallback? onBack;
 
-  // 🔥 NOVO: mensagem dinâmica do Jobu
+  // ===================================================
+  // STEP REAL DO FLUXO
+  // ===================================================
+  final OnboardingStep currentStep;
+
+  final VoidCallback? onBack;
   final String? jobuMessage;
 
   const OnboardingLayout({
     super.key,
     required this.child,
-    required this.currentStep,
+    required this.progressCurrentStep,
     required this.totalSteps,
+    required this.currentStep,
     this.onBack,
     this.jobuMessage,
   });
@@ -32,22 +41,18 @@ class OnboardingLayout extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: theme.scaffoldBackgroundColor,
-
       child: SafeArea(
         top: false,
-
         child: Column(
           children: [
-
             const SizedBox(height: 8),
 
             OnboardingHeader(
-              currentStep: currentStep,
+              currentStep: progressCurrentStep,
               totalSteps: totalSteps,
               onBack: onBack,
             ),
 
-            // 🔥 JOBU DINÂMICO
             JobuTuto(
               text: jobuMessage ?? _getTextByStep(currentStep),
             ),
@@ -61,34 +66,44 @@ class OnboardingLayout extends StatelessWidget {
     );
   }
 
-  String _getTextByStep(int step) {
+  String _getTextByStep(OnboardingStep step) {
     switch (step) {
-      case 0:
+      case OnboardingStep.name:
         return 'Bora lá! Pode me passar alguns dados pessoais?';
-      case 1:
+
+      case OnboardingStep.specialty:
         return 'Qual a sua especialidade?';
-      case 2:
+
+      case OnboardingStep.languages:
         return 'Você fala só um idioma ou mais de um?';
-      case 3:
+
+      case OnboardingStep.account:
         return 'Agora por fim seu e-mail e senha!';
-      case 4:
-        return 'E ai, quer finalizar as infos do perfil?';
-      case 5:
+
+      case OnboardingStep.profileIntro:
+        return 'E aí, quer finalizar as infos do perfil?';
+
+      case OnboardingStep.resume:
         return 'Show! Fala onde você mora e conta mais sobre você!';
-      case 6:
+
+      case OnboardingStep.softSkills:
         return 'As habilidades comportamentais são muito importantes.';
-      case 7:
-        return 'Agora suas habilidades técnicas linguagens, tecnologias e afins.';
-      case 8:
+
+      case OnboardingStep.hardSkills:
+        return 'Agora suas habilidades técnicas, linguagens, tecnologias e afins.';
+
+      case OnboardingStep.experience:
         return 'Coloque suas melhores experiências.';
-      case 9:
-        return 'Já é formado? Está cursando algo?.';
-      case 10:
-        return 'Coloque links para facilitar contatos se desejar.';
-      case 11:
-        return 'Confere tudo e vem pro JobMatch!.';
-      default:
-        return '';
-    }
+
+      case OnboardingStep.education:
+        return 'Já é formado? Está cursando algo?';
+
+      case OnboardingStep.links:
+        return 'Coloque links para facilitar contatos, se desejar.';
+
+      case OnboardingStep.checklist:
+        return 'Confere se preencheu todos os dados direitinho.';
+
+      }
   }
 }

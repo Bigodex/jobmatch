@@ -1,7 +1,7 @@
 // =======================================================
 // ONBOARDING HEADER
 // -------------------------------------------------------
-// Header com botão voltar + progress bar
+// Header com botão voltar + progress bar + percentual
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -27,53 +27,65 @@ class OnboardingHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final appColors = theme.extension<AppColorsExtension>()!;
 
-    final progress = (currentStep + 1) / totalSteps;
+    final progress = totalSteps > 0
+        ? ((currentStep + 1) / totalSteps).clamp(0.0, 1.0)
+        : 0.0;
+
+    final percent = (progress * 100).round().clamp(0, 100);
 
     return Container(
+      width: double.infinity,
       color: appColors.header,
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Row(
         children: [
-
-          // ===================================================
-          // BOTÃO VOLTAR (SEMPRE ATIVO)
-          // ===================================================
-          GestureDetector(
-            onTap: onBack, // 🔥 sempre ativo
-
-            behavior: HitTestBehavior.opaque,
-
-            child: Container(
+          InkWell(
+            onTap: onBack,
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
               padding: const EdgeInsets.all(8),
-
               child: SvgPicture.asset(
                 AppIcons.arrowleft,
-                height: 26,
-                width: 26,
-                colorFilter: ColorFilter.mode(
-                  theme.colorScheme.onSurface,
+                width: 18,
+                height: 18,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
                   BlendMode.srcIn,
                 ),
               ),
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // ===================================================
-          // PROGRESS BAR
-          // ===================================================
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 4,
-                backgroundColor: theme.colorScheme.surface.withOpacity(0.8),
-                valueColor: AlwaysStoppedAnimation(
-                  theme.colorScheme.primary,
+            child: Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: const Color.fromARGB(255, 70, 70, 70),
+                      valueColor: AlwaysStoppedAnimation(
+                        theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                    '$percent%',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

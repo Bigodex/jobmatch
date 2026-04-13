@@ -1,5 +1,11 @@
 // =======================================================
 // PROFILE HARD SKILLS
+// -------------------------------------------------------
+// - Title branco
+// - Textos dos itens mais opacos
+// - Sem justify
+// - Badge de pendência quando faltar dado
+// - Badge de OK em primary com check preto quando estiver completo
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -13,7 +19,10 @@ import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 class ProfileHardSkills extends StatelessWidget {
   final List<TechSkillModel> skills;
 
-  const ProfileHardSkills({super.key, required this.skills});
+  const ProfileHardSkills({
+    super.key,
+    required this.skills,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,24 +48,27 @@ class ProfileHardSkills extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(AppIcons.laptop, width: 16, height: 16),
+                    SvgPicture.asset(
+                      AppIcons.laptop,
+                      width: 16,
+                      height: 16,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       'Habilidades Técnicas',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ],
                 ),
-
-                // 🔥 BOTÃO EDITAR CORRIGIDO
                 IconButton(
                   onPressed: () {
                     context.push(
                       '/edit-hard-skills',
-                      extra: skills, // ✅ CORRETO
+                      extra: skills,
                     );
                   },
                   icon: const Icon(Icons.edit, size: 18),
@@ -68,27 +80,33 @@ class ProfileHardSkills extends StatelessWidget {
             const SizedBox(height: 8),
 
             // ===================================================
-            // LISTA DINÂMICA
+            // LISTA DINÂMICA / PLACEHOLDER
             // ===================================================
-            Column(
-              children: skills.asMap().entries.map((entry) {
-                final index = entry.key;
-                final skill = entry.value;
+            if (skills.isEmpty)
+              _PendingHardSkillItem(
+                fieldName: 'Habilidades Técnicas',
+              )
+            else
+              Column(
+                children: skills.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final skill = entry.value;
 
-                return Column(
-                  children: [
-                    _HardSkillItem(
-                      title: skill.title,
-                      level: _levelLabel(skill.level),
-                      progress: skill.level / 100,
-                      tags: skill.tools,
-                    ),
-                    if (index != skills.length - 1)
-                      const SizedBox(height: 16),
-                  ],
-                );
-              }).toList(),
-            ),
+                  return Column(
+                    children: [
+                      _HardSkillItem(
+                        title: skill.title,
+                        levelValue: skill.level,
+                        levelLabel: _levelLabel(skill.level),
+                        progress: skill.level / 100,
+                        tags: skill.tools,
+                      ),
+                      if (index != skills.length - 1)
+                        const SizedBox(height: 16),
+                    ],
+                  );
+                }).toList(),
+              ),
           ],
         ),
       ),
@@ -98,10 +116,11 @@ class ProfileHardSkills extends StatelessWidget {
   // =======================================================
   // LABEL DE NÍVEL
   // =======================================================
-  String _levelLabel(int level) {
+  static String _levelLabel(int level) {
     if (level >= 85) return 'Avançado';
     if (level >= 60) return 'Intermediário';
-    return 'Básico';
+    if (level > 0) return 'Básico';
+    return '';
   }
 }
 
@@ -111,13 +130,15 @@ class ProfileHardSkills extends StatelessWidget {
 
 class _HardSkillItem extends StatelessWidget {
   final String title;
-  final String level;
+  final int levelValue;
+  final String levelLabel;
   final double progress;
   final List<String> tags;
 
   const _HardSkillItem({
     required this.title,
-    required this.level,
+    required this.levelValue,
+    required this.levelLabel,
     required this.progress,
     required this.tags,
   });
@@ -126,60 +147,120 @@ class _HardSkillItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final safeTitle = title.trim();
+    final cleanTags = tags.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+
+    final hasTitle = safeTitle.isNotEmpty;
+    final hasLevel = levelValue > 0;
+    final hasTags = cleanTags.isNotEmpty;
+    final isPending = !hasTitle || !hasLevel || !hasTags;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: SvgPicture.asset(AppIcons.code, width: 16, height: 16),
+        _StatusIcon(
+          icon: AppIcons.code,
+          isPending: isPending,
         ),
-
         const SizedBox(width: 10),
-
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              if (hasTitle)
+                Text(
+                  safeTitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                )
+              else
+                _pendingText(
+                  context: context,
+                  fieldName: 'nome da habilidade',
                 ),
-              ),
 
               const SizedBox(height: 4),
 
-              Text(
-                level,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
+              if (hasLevel)
+                Text(
+                  levelLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.62),
+                  ),
+                )
+              else
+                _pendingText(
+                  context: context,
+                  fieldName: 'nível',
                 ),
-              ),
 
               const SizedBox(height: 8),
 
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 4,
-                  backgroundColor: Colors.white.withOpacity(0.1),
-                  valueColor:
-                      AlwaysStoppedAnimation(theme.colorScheme.primary),
+              if (hasLevel)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 4,
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    valueColor: AlwaysStoppedAnimation(
+                      theme.colorScheme.primary,
+                    ),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+              SizedBox(height: hasLevel ? 12 : 10),
 
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    tags.map((tag) => _TagChip(label: tag)).toList(),
-              ),
+              if (hasTags)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: cleanTags
+                      .map((tag) => _TagChip(label: tag))
+                      .toList(),
+                )
+              else
+                _pendingText(
+                  context: context,
+                  fieldName: 'tecnologias',
+                ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =======================================================
+// ITEM PENDENTE (LISTA VAZIA)
+// =======================================================
+
+class _PendingHardSkillItem extends StatelessWidget {
+  final String fieldName;
+
+  const _PendingHardSkillItem({
+    required this.fieldName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _StatusIcon(
+          icon: AppIcons.code,
+          isPending: true,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pendingText(
+            context: context,
+            fieldName: fieldName,
           ),
         ),
       ],
@@ -194,12 +275,13 @@ class _HardSkillItem extends StatelessWidget {
 class _TagChip extends StatelessWidget {
   final String label;
 
-  const _TagChip({required this.label});
+  const _TagChip({
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -210,7 +292,106 @@ class _TagChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12),
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.white.withOpacity(0.68),
+        ),
+      ),
+    );
+  }
+}
+
+// =======================================================
+// TEXTO DE PENDÊNCIA
+// =======================================================
+
+Widget _pendingText({
+  required BuildContext context,
+  required String fieldName,
+}) {
+  final pendingColor = Colors.amber.shade300;
+
+  return RichText(
+    textAlign: TextAlign.start,
+    text: TextSpan(
+      style: TextStyle(
+        fontSize: 13,
+        height: 1.4,
+        color: Colors.white.withOpacity(0.78),
+      ),
+      children: [
+        const TextSpan(
+          text: 'Preencha os dados de ',
+        ),
+        TextSpan(
+          text: fieldName,
+          style: TextStyle(
+            color: pendingColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const TextSpan(
+          text: ', que no momento se encontra pendente.',
+        ),
+      ],
+    ),
+  );
+}
+
+// =======================================================
+// ÍCONE COM BADGE DE STATUS
+// =======================================================
+
+class _StatusIcon extends StatelessWidget {
+  final String icon;
+  final bool isPending;
+
+  const _StatusIcon({
+    required this.icon,
+    required this.isPending,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final theme = Theme.of(context);
+    final pendingColor = Colors.amber.shade300;
+
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: SvgPicture.asset(
+              icon,
+              width: 16,
+              height: 16,
+            ),
+          ),
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: isPending ? pendingColor : theme.colorScheme.primary,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.cardTertiary,
+                  width: 1.2,
+                ),
+              ),
+              child: Icon(
+                isPending ? Icons.priority_high_rounded : Icons.check_rounded,
+                size: 8,
+                color: Colors.black.withOpacity(0.9),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

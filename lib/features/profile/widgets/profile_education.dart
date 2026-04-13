@@ -1,11 +1,21 @@
 // =======================================================
 // PROFILE EDUCATION
+// -------------------------------------------------------
+// - Title branco
+// - Textos dos itens mais opacos
+// - Sem justify
+// - Badge de pendência quando faltar dado
+// - Badge de OK em primary com check preto quando estiver completo
+// - Mantém timeline e logos
+// - Aceita imagem local e remota no logo
 // =======================================================
+
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart'; // 🔥 ADD
+import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
@@ -21,9 +31,8 @@ class ProfileEducation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<AppColorsExtension>()!;
-
-    if (educations.isEmpty) return const SizedBox();
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColorsExtension>()!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -36,20 +45,24 @@ class ProfileEducation extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // HEADER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(AppIcons.cap, width: 18, height: 18),
+                    SvgPicture.asset(
+                      AppIcons.cap,
+                      width: 18,
+                      height: 18,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
-                      'Formações',
+                      'Formação',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -66,38 +79,90 @@ class ProfileEducation extends StatelessWidget {
               ],
             ),
 
-            Divider(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+            Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
-            // LISTA
-            Column(
-              children: educations.map((edu) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: _EducationItem(
-                    institution: edu.institution,
-                    course: edu.course,
-                    description: edu.description,
-                    period: _formatPeriod(edu.startDate, edu.endDate),
-                    logoUrl: edu.logoUrl,
-                  ),
-                );
-              }).toList(),
-            ),
+            if (educations.isEmpty)
+              const _PendingEducationItem(
+                fieldName: 'Formação',
+              )
+            else
+              Column(
+                children: educations.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final education = entry.value;
+
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == educations.length - 1 ? 0 : 24,
+                    ),
+                    child: _EducationItem(
+                      institution: _safe(education.institution),
+                      period: _formatPeriod(
+                        education.startDate,
+                        education.endDate,
+                      ),
+                      course: _safe(education.course),
+                      description: _safe(education.description),
+                      logoUrl: _safe(education.logoUrl),
+                      logoColor: _getLogoColor(education.institution),
+                      logoText: _getLogoText(education.institution),
+                    ),
+                  );
+                }).toList(),
+              ),
           ],
         ),
       ),
     );
   }
 
-  String _formatPeriod(DateTime start, DateTime? end) {
-    final formatter = DateFormat('MMM yyyy', 'pt_BR');
-    final startFormatted = formatter.format(start);
+  static String? _safe(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return value.trim();
+  }
 
-    if (end == null) return '$startFormatted - Atual';
+  static String? _formatPeriod(DateTime startDate, DateTime? endDate) {
+    if (startDate.year == 1900) return null;
 
-    final endFormatted = formatter.format(end);
-    return '$startFormatted - $endFormatted';
+    final startFormatted = DateFormat('dd/MM/yyyy').format(startDate);
+
+    if (endDate == null) {
+      final months = _monthDifference(startDate, DateTime.now());
+      final periodText = months >= 12
+          ? '${(months / 12).floor()} ano${(months / 12).floor() > 1 ? 's' : ''}'
+          : '$months mes${months > 1 ? 'es' : ''}';
+
+      return '$startFormatted - Até o momento • $periodText';
+    }
+
+    final endFormatted = DateFormat('dd/MM/yyyy').format(endDate);
+    final months = _monthDifference(startDate, endDate);
+
+    return '$startFormatted - $endFormatted • $months mes${months > 1 ? 'es' : ''}';
+  }
+
+  static int _monthDifference(DateTime start, DateTime end) {
+    int months = (end.year - start.year) * 12 + (end.month - start.month);
+    if (end.day < start.day) {
+      months--;
+    }
+    return months <= 0 ? 1 : months;
+  }
+
+  static Color _getLogoColor(String institution) {
+    final normalized = institution.toLowerCase();
+
+    if (normalized.contains('utfpr')) return const Color(0xFF1E8E3E);
+    if (normalized.contains('unidep')) return const Color(0xFF7A1FA2);
+    if (normalized.contains('unioeste')) return const Color(0xFF0D5BD7);
+
+    return const Color(0xFF3A3A3A);
+  }
+
+  static String _getLogoText(String institution) {
+    if (institution.trim().isEmpty) return '?';
+    return institution.trim()[0].toUpperCase();
   }
 }
 
@@ -106,50 +171,46 @@ class ProfileEducation extends StatelessWidget {
 // =======================================================
 
 class _EducationItem extends StatelessWidget {
-  final String institution;
-  final String course;
-  final String description;
-  final String period;
+  final String? institution;
+  final String? period;
+  final String? course;
+  final String? description;
   final String? logoUrl;
+  final Color logoColor;
+  final String logoText;
 
   const _EducationItem({
     required this.institution,
+    required this.period,
     required this.course,
     required this.description,
-    required this.period,
     required this.logoUrl,
+    required this.logoColor,
+    required this.logoText,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isPending = institution == null ||
+        period == null ||
+        course == null ||
+        description == null;
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          // COLUNA ESQUERDA
           SizedBox(
             width: 44,
             child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: logoUrl != null && logoUrl!.isNotEmpty
-                      ? Image.network(
-                          logoUrl!,
-                          width: 36,
-                          height: 36,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) {
-                            return _fallback();
-                          },
-                        )
-                      : _fallback(),
+                _StatusLogo(
+                  logoUrl: logoUrl,
+                  logoColor: logoColor,
+                  logoText: logoText,
+                  isPending: isPending,
                 ),
-
                 const SizedBox(height: 8),
-
-                // LINHA DINÂMICA
                 Expanded(
                   child: Container(
                     width: 2,
@@ -159,54 +220,69 @@ class _EducationItem extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // CONTEÚDO
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-                Text(
-                  institution,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                if (institution != null)
+                  Text(
+                    institution!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'instituição',
                   ),
-                ),
-
                 const SizedBox(height: 4),
-
-                Text(
-                  period,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white
+                if (period != null)
+                  Text(
+                    period!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'período',
                   ),
-                ),
-
                 const SizedBox(height: 14),
-
-                Text(
-                  course,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                if (course != null)
+                  Text(
+                    course!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withOpacity(0.74),
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'curso',
                   ),
-                ),
-
                 const SizedBox(height: 6),
-
-                Text(
-                  description,
-                  textAlign: TextAlign.justify,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    color: Colors.white
+                if (description != null)
+                  Text(
+                    description!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'descrição',
                   ),
-                ),
               ],
             ),
           ),
@@ -214,13 +290,237 @@ class _EducationItem extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _fallback() {
+// =======================================================
+// ITEM PENDENTE (LISTA VAZIA)
+// =======================================================
+
+class _PendingEducationItem extends StatelessWidget {
+  final String fieldName;
+
+  const _PendingEducationItem({
+    required this.fieldName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PendingIcon(icon: AppIcons.cap),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _pendingText(
+            context: context,
+            fieldName: fieldName,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =======================================================
+// LOGO COM BADGE DE STATUS
+// =======================================================
+
+class _StatusLogo extends StatelessWidget {
+  final String? logoUrl;
+  final Color logoColor;
+  final String logoText;
+  final bool isPending;
+
+  const _StatusLogo({
+    required this.logoUrl,
+    required this.logoColor,
+    required this.logoText,
+    required this.isPending,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final theme = Theme.of(context);
+    final pendingColor = Colors.amber.shade300;
+
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _buildLogoImage(),
+            ),
+          ),
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: isPending ? pendingColor : theme.colorScheme.primary,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.cardTertiary,
+                  width: 1.2,
+                ),
+              ),
+              child: Icon(
+                isPending ? Icons.priority_high_rounded : Icons.check_rounded,
+                size: 9,
+                color: Colors.black.withOpacity(0.9),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoImage() {
+    if (logoUrl == null || logoUrl!.trim().isEmpty) {
+      return _fallbackLogo();
+    }
+
+    final normalized = logoUrl!.trim().toLowerCase();
+
+    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      return Image.network(
+        logoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return _fallbackLogo();
+        },
+      );
+    }
+
+    final file = File(logoUrl!);
+
+    if (file.existsSync()) {
+      return Image.file(
+        file,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return _fallbackLogo();
+        },
+      );
+    }
+
+    return _fallbackLogo();
+  }
+
+  Widget _fallbackLogo() {
     return Container(
       width: 36,
       height: 36,
-      color: Colors.white.withOpacity(0.1),
-      child: const Icon(Icons.school, size: 18),
+      color: logoColor,
+      alignment: Alignment.center,
+      child: Text(
+        logoText,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
     );
   }
+}
+
+// =======================================================
+// ÍCONE SIMPLES COM BADGE DE PENDÊNCIA
+// =======================================================
+
+class _PendingIcon extends StatelessWidget {
+  final String icon;
+
+  const _PendingIcon({
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final pendingColor = Colors.amber.shade300;
+
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: SvgPicture.asset(
+              icon,
+              width: 16,
+              height: 16,
+            ),
+          ),
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: pendingColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.cardTertiary,
+                  width: 1.2,
+                ),
+              ),
+              child: Icon(
+                Icons.priority_high_rounded,
+                size: 8,
+                color: Colors.black.withOpacity(0.9),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =======================================================
+// TEXTO DE PENDÊNCIA
+// =======================================================
+
+Widget _pendingText({
+  required BuildContext context,
+  required String fieldName,
+}) {
+  final pendingColor = Colors.amber.shade300;
+
+  return RichText(
+    textAlign: TextAlign.start,
+    text: TextSpan(
+      style: TextStyle(
+        fontSize: 13,
+        height: 1.4,
+        color: Colors.white.withOpacity(0.78),
+      ),
+      children: [
+        const TextSpan(
+          text: 'Preencha os dados de ',
+        ),
+        TextSpan(
+          text: fieldName,
+          style: TextStyle(
+            color: pendingColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const TextSpan(
+          text: ', que no momento se encontra pendente.',
+        ),
+      ],
+    ),
+  );
 }

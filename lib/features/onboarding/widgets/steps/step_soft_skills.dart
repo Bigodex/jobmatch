@@ -7,7 +7,8 @@
 // - Remove input único com botão +
 // - Corrigido erro de modificação de provider no initState
 // - Validações faladas pelo Jobu
-// - Título e descrição começando com letra maiúscula
+// - Título em Title Case
+// - TextArea com apenas a primeira letra maiúscula
 // - Labels + ícones sobre os campos
 // - Contadores ocultos
 // - Primeiro item fixo, não removível
@@ -28,9 +29,11 @@ import 'package:jobmatch/shared/widgets/app_section_card.dart';
 import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 // =======================================================
-// TITLE / DESCRIPTION FORMATTER
+// FORMATTER DO TÍTULO
+// -------------------------------------------------------
+// Mantém cada palavra iniciando com maiúscula
 // =======================================================
-class SoftSkillTextInputFormatter extends TextInputFormatter {
+class SoftSkillTitleInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -64,6 +67,44 @@ class SoftSkillTextInputFormatter extends TextInputFormatter {
     }
 
     return buffer.toString();
+  }
+}
+
+// =======================================================
+// FORMATTER DA DESCRIÇÃO
+// -------------------------------------------------------
+// Apenas a primeira letra do texto fica maiúscula
+// O restante fica minúsculo
+// =======================================================
+class SoftSkillDescriptionInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final formatted = _toSentenceCase(newValue.text);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  static String _toSentenceCase(String value) {
+    if (value.isEmpty) return value;
+
+    final lower = value.toLowerCase();
+    final chars = lower.split('');
+
+    for (int i = 0; i < chars.length; i++) {
+      if (RegExp(r'[a-zà-ÿA-ZÀ-Ÿ]').hasMatch(chars[i])) {
+        chars[i] = chars[i].toUpperCase();
+        break;
+      }
+    }
+
+    return chars.join();
   }
 }
 
@@ -107,7 +148,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
     titles = initialSkills
         .map(
           (e) => TextEditingController(
-            text: SoftSkillTextInputFormatter._toTitleCase(e.title),
+            text: SoftSkillTitleInputFormatter._toTitleCase(e.title),
           ),
         )
         .toList();
@@ -115,7 +156,9 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
     descriptions = initialSkills
         .map(
           (e) => TextEditingController(
-            text: SoftSkillTextInputFormatter._toTitleCase(e.description),
+            text: SoftSkillDescriptionInputFormatter._toSentenceCase(
+              e.description,
+            ),
           ),
         )
         .toList();
@@ -521,7 +564,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
             hasError: _titleHasError(index),
             isValid: _titleIsValidState(index),
             inputFormatters: [
-              SoftSkillTextInputFormatter(),
+              SoftSkillTitleInputFormatter(),
             ],
             onChanged: (_) {
               widget.onJobuMessageChange(null);
@@ -545,7 +588,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
             hasError: _descriptionHasError(index),
             isValid: _descriptionIsValidState(index),
             inputFormatters: [
-              SoftSkillTextInputFormatter(),
+              SoftSkillDescriptionInputFormatter(),
             ],
             onChanged: (_) {
               widget.onJobuMessageChange(null);

@@ -709,7 +709,7 @@ class _StepExperienceState extends ConsumerState<StepExperience> {
 
       if (description.length < 10) {
         _showJobuMessage(
-          'A descrição de "$company" está curta demais.',
+          'A descrição de \n"$company" está curta demais.',
         );
         return;
       }

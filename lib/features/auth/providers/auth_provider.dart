@@ -31,10 +31,11 @@ final authStateProvider = StreamProvider<AuthUserModel?>((ref) {
 // CONTROLLER
 // =======================================================
 class AuthController extends StateNotifier<AsyncValue<void>> {
+  final Ref ref;
   final AuthService _service;
   final ProfileService _profileService;
 
-  AuthController(this._service, this._profileService)
+  AuthController(this.ref, this._service, this._profileService)
       : super(const AsyncData(null));
 
   // ===================================================
@@ -45,6 +46,10 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 
     try {
       await _service.login(email: email, password: password);
+
+      // 🔥 força recarregar o perfil da conta logada
+      ref.invalidate(profileProvider);
+
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(e, st);
@@ -63,6 +68,23 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
       // 🔥 CRIA PROFILE AUTOMATICAMENTE
       await _profileService.createProfile();
 
+      // 🔥 força recarregar o profile recém-criado
+      ref.invalidate(profileProvider);
+
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+
+  // ===================================================
+  // UPDATE CURRENT USER EMAIL
+  // ===================================================
+  Future<void> updateCurrentUserEmail(String newEmail) async {
+    state = const AsyncLoading();
+
+    try {
+      await _service.updateCurrentUserEmail(newEmail);
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(e, st);
@@ -73,7 +95,16 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   // LOGOUT
   // ===================================================
   Future<void> logout() async {
-    await _service.logout();
+    try {
+      await _service.logout();
+
+      // 🔥 limpa o profile em memória ao sair
+      ref.invalidate(profileProvider);
+
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
   }
 }
 
@@ -87,5 +118,5 @@ final authControllerProvider =
   // 🔥 INJEÇÃO CORRETA
   final profileService = ref.watch(profileServiceProvider);
 
-  return AuthController(service, profileService);
+  return AuthController(ref, service, profileService);
 });

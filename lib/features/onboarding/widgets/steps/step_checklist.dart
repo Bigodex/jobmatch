@@ -5,8 +5,11 @@
 // e do que ainda está pendente antes de criar a conta
 // - Organizado por seções
 // - Pendentes com contorno amarelo + exclamação
-// - Ícones do AppIcons com badge de status
-// - Idiomas com layout customizado
+// - Opcionais só aparecem se foram visitados ou preenchidos
+// - Ícones internos dos itens brancos
+// - Badges internos azul primary nos itens concluídos
+// - Ícone dentro do badge concluído preto
+// - Ícones do título do card mantidos com cor de status
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -33,6 +36,7 @@ class StepChecklist extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
     final onboarding = ref.watch(onboardingProvider);
+    final visitedOptionalStepKeys = onboarding.visitedOptionalSteps.toSet();
 
     final cpf = onboarding.userDocument?.cpf.trim() ?? '';
     final hasFullName =
@@ -48,7 +52,7 @@ class StepChecklist extends ConsumerWidget {
       _ChecklistSectionData(
         title: 'Identificação',
         icon: AppIcons.id,
-        stepKey: 'identification',
+        stepKey: 'name',
         completed: hasFullName && hasBirthDate && hasCpf,
         items: [
           _ChecklistLineData(
@@ -63,7 +67,7 @@ class StepChecklist extends ConsumerWidget {
                 ? _formatDate(onboarding.birthDate!)
                 : 'Não preenchido',
             completed: hasBirthDate,
-            icon: AppIcons.calendar,
+            icon: AppIcons.cake,
           ),
           _ChecklistLineData(
             title: 'CPF',
@@ -84,7 +88,7 @@ class StepChecklist extends ConsumerWidget {
                   (specialty) => _ChecklistLineData(
                     title: specialty,
                     completed: true,
-                    icon: AppIcons.nodes,
+                    icon: _getSpecialtyIcon(specialty),
                   ),
                 )
                 .toList()
@@ -124,7 +128,7 @@ class StepChecklist extends ConsumerWidget {
               ],
       ),
       _ChecklistSectionData(
-        title: 'Conta',
+        title: 'Login',
         icon: AppIcons.puzzle,
         stepKey: 'account',
         completed: hasAccount,
@@ -352,11 +356,16 @@ class StepChecklist extends ConsumerWidget {
       ),
     ];
 
+    final visibleOptionalSections = optionalSections.where((section) {
+      if (section.completed) return true;
+      return visitedOptionalStepKeys.contains(section.stepKey);
+    }).toList();
+
     final completedOptionalSections =
-        optionalSections.where((item) => item.completed).toList();
+        visibleOptionalSections.where((item) => item.completed).toList();
 
     final pendingOptionalSections =
-        optionalSections.where((item) => !item.completed).toList();
+        visibleOptionalSections.where((item) => !item.completed).toList();
 
     final allRequiredCompleted =
         requiredSections.every((section) => section.completed);
@@ -397,7 +406,7 @@ class StepChecklist extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    _sectionTitle(context, 'Obrigatórios'),
+                    _sectionTitle(context, 'Dados do Usuário'),
                     const SizedBox(height: 12),
                     ...requiredSections.map(
                       (section) => Padding(
@@ -426,7 +435,11 @@ class StepChecklist extends ConsumerWidget {
 
                     if (pendingOptionalSections.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      _sectionTitle(context, 'Pendentes'),
+                      _sectionTitle(
+                        context,
+                        'Pendentes',
+                        isPending: true,
+                      ),
                       const SizedBox(height: 12),
                       ...pendingOptionalSections.map(
                         (section) => Padding(
@@ -458,15 +471,79 @@ class StepChecklist extends ConsumerWidget {
     );
   }
 
-  Widget _sectionTitle(BuildContext context, String title) {
+  Widget _sectionTitle(
+    BuildContext context,
+    String title, {
+    bool isPending = false,
+  }) {
     return Text(
       title,
       style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.primary,
+        color: isPending
+            ? Colors.amber.shade300
+            : Theme.of(context).colorScheme.primary,
       ),
     );
+  }
+
+  static String _getSpecialtyIcon(String specialty) {
+    final normalized = specialty
+        .trim()
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('ã', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('õ', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ç', 'c');
+
+    if (normalized.contains('desenvolv') ||
+        normalized.contains('program') ||
+        normalized.contains('software') ||
+        normalized.contains('frontend') ||
+        normalized.contains('backend') ||
+        normalized.contains('fullstack') ||
+        normalized.contains('mobile')) {
+      return AppIcons.code;
+    }
+
+    if (normalized.contains('designer') ||
+        normalized.contains('design') ||
+        normalized.contains('ux') ||
+        normalized.contains('ui')) {
+      return AppIcons.resume;
+    }
+
+    if (normalized.contains('qa') ||
+        normalized.contains('qualidade') ||
+        normalized.contains('teste') ||
+        normalized.contains('tester')) {
+      return AppIcons.puzzle;
+    }
+
+    if (normalized.contains('dados') ||
+        normalized.contains('data') ||
+        normalized.contains('analyst') ||
+        normalized.contains('analista')) {
+      return AppIcons.nodes;
+    }
+
+    if (normalized.contains('produto') ||
+        normalized.contains('product') ||
+        normalized.contains('manager') ||
+        normalized.contains('gerente')) {
+      return AppIcons.briefcase;
+    }
+
+    return AppIcons.nodes;
   }
 
   static String _formatDate(DateTime date) {
@@ -560,7 +637,7 @@ class _ChecklistSectionTile extends StatelessWidget {
     final pendingColor = Colors.amber.shade300;
 
     final borderColor = section.completed
-        ? theme.colorScheme.primary.withOpacity(0.35)
+        ? theme.colorScheme.primary.withOpacity(1.0)
         : pendingColor.withOpacity(0.85);
 
     return Container(
@@ -596,17 +673,8 @@ class _ChecklistSectionTile extends StatelessWidget {
               InkWell(
                 borderRadius: BorderRadius.circular(999),
                 onTap: onEdit,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: section.completed
-                          ? theme.colorScheme.primary.withOpacity(0.18)
-                          : pendingColor.withOpacity(0.35),
-                    ),
-                  ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
                   child: SvgPicture.asset(
                     AppIcons.pencil,
                     width: 16,
@@ -675,6 +743,11 @@ class _ChecklistLineItem extends StatelessWidget {
           icon: item.icon,
           completed: item.completed,
           size: 18,
+          iconColorOverride: Colors.white,
+          badgeColorOverride: item.completed
+              ? Theme.of(context).colorScheme.primary
+              : Colors.amber.shade300,
+          badgeIconColorOverride: Colors.black.withOpacity(0.85),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -728,8 +801,6 @@ class _ChecklistLanguageLineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -737,6 +808,10 @@ class _ChecklistLanguageLineItem extends StatelessWidget {
           flag: item.flag ?? '🌐',
           completed: item.completed,
           size: 20,
+          badgeColorOverride: item.completed
+              ? Theme.of(context).colorScheme.primary
+              : Colors.amber.shade300,
+          badgeIconColorOverride: Colors.black.withOpacity(0.85),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -773,7 +848,7 @@ class _ChecklistLanguageLineItem extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.primary,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                 ],
@@ -790,11 +865,17 @@ class _ChecklistStatusIcon extends StatelessWidget {
   final String icon;
   final bool completed;
   final double size;
+  final Color? iconColorOverride;
+  final Color? badgeColorOverride;
+  final Color? badgeIconColorOverride;
 
   const _ChecklistStatusIcon({
     required this.icon,
     required this.completed,
     required this.size,
+    this.iconColorOverride,
+    this.badgeColorOverride,
+    this.badgeIconColorOverride,
   });
 
   @override
@@ -802,8 +883,15 @@ class _ChecklistStatusIcon extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
     final pendingColor = Colors.amber.shade300;
-    final iconColor = completed ? theme.colorScheme.primary : pendingColor;
-    final badgeColor = completed ? theme.colorScheme.primary : pendingColor;
+
+    final iconColor = iconColorOverride ??
+        (completed ? theme.colorScheme.primary : pendingColor);
+
+    final badgeColor = badgeColorOverride ??
+        (completed ? theme.colorScheme.primary : pendingColor);
+
+    final badgeIconColor =
+        badgeIconColorOverride ?? Colors.black.withOpacity(0.85);
 
     return SizedBox(
       width: size + 8,
@@ -841,7 +929,7 @@ class _ChecklistStatusIcon extends StatelessWidget {
               child: Icon(
                 completed ? Icons.check_rounded : Icons.priority_high_rounded,
                 size: size * 0.34,
-                color: Colors.black.withOpacity(0.85),
+                color: badgeIconColor,
               ),
             ),
           ),
@@ -855,19 +943,27 @@ class _ChecklistFlagStatusIcon extends StatelessWidget {
   final String flag;
   final bool completed;
   final double size;
+  final Color? badgeColorOverride;
+  final Color? badgeIconColorOverride;
 
   const _ChecklistFlagStatusIcon({
     required this.flag,
     required this.completed,
     required this.size,
+    this.badgeColorOverride,
+    this.badgeIconColorOverride,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final pendingColor = Colors.amber.shade300;
-    final badgeColor =
-        completed ? Theme.of(context).colorScheme.primary : pendingColor;
+
+    final badgeColor = badgeColorOverride ??
+        (completed ? Theme.of(context).colorScheme.primary : pendingColor);
+
+    final badgeIconColor =
+        badgeIconColorOverride ?? Colors.black.withOpacity(0.85);
 
     return SizedBox(
       width: size + 10,
@@ -900,7 +996,7 @@ class _ChecklistFlagStatusIcon extends StatelessWidget {
               child: Icon(
                 completed ? Icons.check_rounded : Icons.priority_high_rounded,
                 size: size * 0.32,
-                color: Colors.black.withOpacity(0.85),
+                color: badgeIconColor,
               ),
             ),
           ),

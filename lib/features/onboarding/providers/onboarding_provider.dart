@@ -61,6 +61,11 @@ class OnboardingState {
   final List<TechSkillModel> techSkills;
   final List<SocialLinkModel> links;
 
+  // ===================================================
+  // ETAPAS OPCIONAIS VISITADAS
+  // ===================================================
+  final List<String> visitedOptionalSteps;
+
   const OnboardingState({
     this.name,
     this.lastName,
@@ -84,6 +89,7 @@ class OnboardingState {
     this.softSkills = const [],
     this.techSkills = const [],
     this.links = const [],
+    this.visitedOptionalSteps = const [],
   });
 
   // ===================================================
@@ -112,6 +118,7 @@ class OnboardingState {
     List<SoftSkillModel>? softSkills,
     List<TechSkillModel>? techSkills,
     List<SocialLinkModel>? links,
+    List<String>? visitedOptionalSteps,
   }) {
     return OnboardingState(
       name: identical(name, _unset) ? this.name : name as String?,
@@ -149,6 +156,8 @@ class OnboardingState {
       softSkills: softSkills ?? this.softSkills,
       techSkills: techSkills ?? this.techSkills,
       links: links ?? this.links,
+      visitedOptionalSteps:
+          visitedOptionalSteps ?? this.visitedOptionalSteps,
     );
   }
 
@@ -250,6 +259,20 @@ class OnboardingController extends StateNotifier<OnboardingState> {
   void setCompleteProfileNow(bool value) {
     state = state.copyWith(
       completeProfileNow: value,
+    );
+  }
+
+  // ===================================================
+  // ETAPAS OPCIONAIS VISITADAS
+  // ===================================================
+  void markOptionalStepVisited(String stepKey) {
+    if (state.visitedOptionalSteps.contains(stepKey)) return;
+
+    state = state.copyWith(
+      visitedOptionalSteps: [
+        ...state.visitedOptionalSteps,
+        stepKey,
+      ],
     );
   }
 

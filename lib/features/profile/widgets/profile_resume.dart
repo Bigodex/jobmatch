@@ -12,10 +12,12 @@ import 'package:jobmatch/features/profile/screens/edit_resume_screen.dart';
 
 class ProfileResume extends StatelessWidget {
   final ResumeModel? resume;
+  final String? email;
 
   const ProfileResume({
     super.key,
     required this.resume,
+    this.email,
   });
 
   @override
@@ -24,6 +26,12 @@ class ProfileResume extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
 
     if (resume == null) return const SizedBox();
+
+    final emailValue = _safe(email);
+    final birthValue = _formatBirth(resume!.birthDate);
+    final stateValue = _safe(resume!.state);
+    final cityValue = _safe(resume!.city);
+    final descriptionValue = _safe(resume!.description);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -43,17 +51,17 @@ class ProfileResume extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    SvgPicture.asset(AppIcons.cv, width: 18, height: 18),
-                    const SizedBox(width: 8),
+                    SvgPicture.asset(AppIcons.cv, width: 20, height: 20),
+                    const SizedBox(width: 12),
                     Text(
                       resume!.labels.title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
                       ),
                     ),
                   ],
                 ),
-
                 IconButton(
                   onPressed: () {
                     Navigator.push(
@@ -69,29 +77,54 @@ class ProfileResume extends StatelessWidget {
             ),
 
             Divider(color: theme.dividerColor.withOpacity(0.2)),
+            const SizedBox(height: 8),
+
+            _info(
+              context: context,
+              icon: AppIcons.mail,
+              title: 'Email',
+              value: emailValue,
+              placeholderHighlight: 'Email',
+            ),
+
             const SizedBox(height: 12),
 
             _info(
+              context: context,
               icon: AppIcons.cake,
               title: resume!.labels.birthDateLabel,
-              value: _formatBirth(resume!.birthDate),
+              value: birthValue,
+              placeholderHighlight: resume!.labels.birthDateLabel,
             ),
 
             const SizedBox(height: 12),
 
             _info(
-              icon: AppIcons.building,
-              title: resume!.labels.cityLabel,
-              value: _safe(resume!.city),
+              context: context,
+              icon: AppIcons.state,
+              title: resume!.labels.stateLabel,
+              value: stateValue,
+              placeholderHighlight: 'Estado',
             ),
 
             const SizedBox(height: 12),
 
-            // 🔥 DESCRIPTION COM LINHA + JUSTIFY
+            _info(
+              context: context,
+              icon: AppIcons.buildingfull,
+              title: resume!.labels.cityLabel,
+              value: cityValue,
+              placeholderHighlight: 'Cidade',
+            ),
+
+            const SizedBox(height: 12),
+
             _infoWithLine(
-              icon: AppIcons.info,
+              context: context,
+              icon: AppIcons.infofull,
               title: resume!.labels.descriptionLabel,
-              value: _safe(resume!.description),
+              value: descriptionValue,
+              placeholderHighlight: 'Descrição',
             ),
           ],
         ),
@@ -103,23 +136,43 @@ class ProfileResume extends StatelessWidget {
   // ITEM NORMAL (SEM LINHA)
   // =======================================================
   Widget _info({
+    required BuildContext context,
     required String icon,
     required String title,
-    required String value,
+    required String? value,
+    required String placeholderHighlight,
   }) {
+    final isPending = value == null;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SvgPicture.asset(icon, width: 16, height: 16),
+        _StatusIcon(
+          icon: icon,
+          isPending: isPending,
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 4),
-              Text(value),
+              if (isPending)
+                _pendingText(
+                  context: context,
+                  fieldName: placeholderHighlight,
+                )
+              else
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.62),
+                  ),
+                ),
             ],
           ),
         ),
@@ -128,24 +181,29 @@ class ProfileResume extends StatelessWidget {
   }
 
   // =======================================================
-  // ITEM COM LINHA + JUSTIFY (DESCRIPTION)
+  // ITEM COM LINHA (DESCRIPTION)
   // =======================================================
   Widget _infoWithLine({
+    required BuildContext context,
     required String icon,
     required String title,
-    required String value,
+    required String? value,
+    required String placeholderHighlight,
   }) {
+    final isPending = value == null;
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ÍCONE + LINHA
           SizedBox(
-            width: 16,
+            width: 18,
             child: Column(
               children: [
-                SvgPicture.asset(icon, width: 16, height: 16),
-
+                _StatusIcon(
+                  icon: icon,
+                  isPending: isPending,
+                ),
                 Expanded(
                   child: Container(
                     width: 1.5,
@@ -156,23 +214,29 @@ class ProfileResume extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: 10),
-
-          // TEXTO
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-
-                // 🔥 JUSTIFY AQUI
                 Text(
-                  value,
-                  textAlign: TextAlign.justify,
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                const SizedBox(height: 4),
+                if (isPending)
+                  _pendingText(
+                    context: context,
+                    fieldName: placeholderHighlight,
+                  )
+                else
+                  Text(
+                    value,
+                    textAlign: TextAlign.start,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.62),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -181,11 +245,49 @@ class ProfileResume extends StatelessWidget {
     );
   }
 
-  String _safe(String? v) =>
-      v == null || v.trim().isEmpty ? 'Não informado' : v;
+  // =======================================================
+  // TEXTO DE PENDÊNCIA
+  // =======================================================
+  Widget _pendingText({
+    required BuildContext context,
+    required String fieldName,
+  }) {
+    final pendingColor = Colors.amber.shade300;
 
-  String _formatBirth(DateTime? d) {
-    if (d == null) return 'Não informado';
+    return RichText(
+      textAlign: TextAlign.start,
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.4,
+          color: Colors.white.withOpacity(0.78),
+        ),
+        children: [
+          const TextSpan(
+            text: 'Preencha os dados de ',
+          ),
+          TextSpan(
+            text: fieldName,
+            style: TextStyle(
+              color: pendingColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const TextSpan(
+            text: ', que no momento se encontra pendente.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _safe(String? v) {
+    if (v == null || v.trim().isEmpty) return null;
+    return v.trim();
+  }
+
+  String? _formatBirth(DateTime? d) {
+    if (d == null) return null;
 
     final now = DateTime.now();
     int age = now.year - d.year;
@@ -195,6 +297,71 @@ class ProfileResume extends StatelessWidget {
       age--;
     }
 
-    return '${d.day}/${d.month}/${d.year} | $age anos';
+    final day = d.day.toString().padLeft(2, '0');
+    final month = d.month.toString().padLeft(2, '0');
+
+    return '$day/$month/${d.year} | $age anos';
+  }
+}
+
+// =======================================================
+// ÍCONE COM BADGE DE STATUS
+// -------------------------------------------------------
+// - Pendente -> badge amarela com exclamação preta
+// - Preenchido -> badge azul com check preto
+// =======================================================
+class _StatusIcon extends StatelessWidget {
+  final String icon;
+  final bool isPending;
+
+  const _StatusIcon({
+    required this.icon,
+    required this.isPending,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColorsExtension>()!;
+    final pendingColor = Colors.amber.shade300;
+    final successColor = theme.colorScheme.primary;
+
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: SvgPicture.asset(
+              icon,
+              width: 16,
+              height: 16,
+            ),
+          ),
+          Positioned(
+            right: -3,
+            bottom: -3,
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: isPending ? pendingColor : successColor,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: colors.cardTertiary,
+                  width: 1.2,
+                ),
+              ),
+              child: Icon(
+                isPending ? Icons.priority_high_rounded : Icons.check_rounded,
+                size: 8,
+                color: Colors.black.withOpacity(0.9),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

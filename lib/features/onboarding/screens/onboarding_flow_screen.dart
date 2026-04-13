@@ -78,25 +78,147 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   bool _isEditingFromChecklist = false;
 
   // ===================================================
+  // ÚLTIMO STEP ANTES DO CHECKLIST
+  // ===================================================
+  OnboardingStep? _lastStepBeforeChecklist;
+
+  // ===================================================
+  // STEPS DA BARRA - OBRIGATÓRIOS
+  // ===================================================
+  static const List<OnboardingStep> _requiredProgressSteps = [
+    OnboardingStep.name,
+    OnboardingStep.specialty,
+    OnboardingStep.languages,
+    OnboardingStep.account,
+  ];
+
+  // ===================================================
+  // STEPS DA BARRA - OPCIONAIS
+  // ===================================================
+  static const List<OnboardingStep> _optionalProgressSteps = [
+    OnboardingStep.resume,
+    OnboardingStep.softSkills,
+    OnboardingStep.hardSkills,
+    OnboardingStep.experience,
+    OnboardingStep.education,
+    OnboardingStep.links,
+  ];
+
+  // ===================================================
+  // MAPEIA STEP OPCIONAL -> CHAVE DO CHECKLIST
+  // ===================================================
+  String? _getOptionalStepKey(OnboardingStep step) {
+    switch (step) {
+      case OnboardingStep.resume:
+        return 'resume';
+      case OnboardingStep.softSkills:
+        return 'softSkills';
+      case OnboardingStep.hardSkills:
+        return 'hardSkills';
+      case OnboardingStep.experience:
+        return 'experience';
+      case OnboardingStep.education:
+        return 'education';
+      case OnboardingStep.links:
+        return 'links';
+      default:
+        return null;
+    }
+  }
+
+  // ===================================================
+  // DEFINE STEP E MARCA VISITA OPCIONAL
+  // ===================================================
+  void _setStep(OnboardingStep step, {bool editingFromChecklist = false}) {
+    setState(() {
+      _currentStep = step;
+      _isEditingFromChecklist = editingFromChecklist;
+      _jobuMessage = null;
+    });
+
+    final optionalStepKey = _getOptionalStepKey(step);
+
+    if (optionalStepKey != null) {
+      ref
+          .read(onboardingProvider.notifier)
+          .markOptionalStepVisited(optionalStepKey);
+    }
+  }
+
+  // ===================================================
+  // DEFINE SE A BARRA EXPANDE
+  // ===================================================
+  bool _shouldUseExpandedProgress(OnboardingState onboarding) {
+    if (onboarding.completeProfileNow) {
+      return true;
+    }
+
+    return _optionalProgressSteps.contains(_currentStep);
+  }
+
+  // ===================================================
+  // LISTA ATIVA DE PROGRESSO
+  // ===================================================
+  List<OnboardingStep> _getActiveProgressSteps(OnboardingState onboarding) {
+    if (_shouldUseExpandedProgress(onboarding)) {
+      return [..._requiredProgressSteps, ..._optionalProgressSteps];
+    }
+
+    return _requiredProgressSteps;
+  }
+
+  // ===================================================
+  // ÍNDICE DA BARRA
+  // ===================================================
+  int _getProgressCurrentStep(OnboardingState onboarding) {
+    final activeSteps = _getActiveProgressSteps(onboarding);
+    final currentIndex = activeSteps.indexOf(_currentStep);
+
+    if (currentIndex != -1) {
+      return currentIndex;
+    }
+
+    if (_currentStep == OnboardingStep.profileIntro) {
+      return _requiredProgressSteps.length - 1;
+    }
+
+    if (_currentStep == OnboardingStep.checklist) {
+      return activeSteps.length - 1;
+    }
+
+    return 0;
+  }
+
+  // ===================================================
+  // TOTAL DE STEPS DA BARRA
+  // ===================================================
+  int _getProgressTotalSteps(OnboardingState onboarding) {
+    return _getActiveProgressSteps(onboarding).length;
+  }
+
+  // ===================================================
   // NAVEGAÇÃO NORMAL
   // ===================================================
   void _nextStep() {
-    setState(() {
-      final current = _currentStep;
+    final current = _currentStep;
 
-      if (current == OnboardingStep.profileIntro) {
-        final onboarding = ref.read(onboardingProvider);
+    if (current == OnboardingStep.profileIntro) {
+      final onboarding = ref.read(onboardingProvider);
 
-        if (!onboarding.completeProfileNow) {
-          _currentStep = OnboardingStep.checklist;
-          _jobuMessage = null;
-          return;
-        }
+      if (!onboarding.completeProfileNow) {
+        _lastStepBeforeChecklist = OnboardingStep.profileIntro;
+        _setStep(OnboardingStep.checklist);
+        return;
       }
+    }
 
-      _currentStep = _currentStep.next();
-      _jobuMessage = null;
-    });
+    final nextStep = _currentStep.next();
+
+    if (nextStep == OnboardingStep.checklist) {
+      _lastStepBeforeChecklist = _currentStep;
+    }
+
+    _setStep(nextStep);
   }
 
   // ===================================================
@@ -145,6 +267,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
     if (_currentStep == OnboardingStep.name) {
       context.go('/welcome');
+      return;
+    }
+
+    if (_currentStep == OnboardingStep.checklist &&
+        _lastStepBeforeChecklist != null) {
+      _setStep(_lastStepBeforeChecklist!);
       return;
     }
 
@@ -209,11 +337,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         break;
     }
 
-    setState(() {
-      _isEditingFromChecklist = true;
-      _currentStep = targetStep;
-      _jobuMessage = null;
-    });
+    _setStep(targetStep, editingFromChecklist: true);
   }
 
   // ===================================================
@@ -258,6 +382,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       final profile = ProfileModel(
         user: UserModel(
           name: onboarding.fullName,
+          email: onboarding.email!.trim(),
           role: onboarding.role,
           avatarUrl: '',
           coverUrl: '',
@@ -266,6 +391,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         ),
         resume: ResumeModel(
           birthDate: onboarding.birthDate,
+          state: onboarding.selectedUf,
           city: onboarding.city,
           description: onboarding.resumeDescription,
           labels: ResumeLabels.defaultLabels(),
@@ -289,6 +415,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         _isCreatingAccount = false;
         _isEditingFromChecklist = false;
         _jobuMessage = null;
+        _lastStepBeforeChecklist = null;
       });
 
       context.go('/home');
@@ -302,12 +429,13 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     }
   }
 
-  // ===================================================
-  // BUILD
-  // ===================================================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onboarding = ref.watch(onboardingProvider);
+
+    final progressCurrentStep = _getProgressCurrentStep(onboarding);
+    final progressTotalSteps = _getProgressTotalSteps(onboarding);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -320,9 +448,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: OnboardingLayout(
-                  key: ValueKey('${_currentStep.name}-${_isEditingFromChecklist ? 'edit' : 'flow'}'),
-                  currentStep: _currentStep.index,
-                  totalSteps: OnboardingStep.values.length,
+                  key: ValueKey(
+                    '${_currentStep.name}-${_isEditingFromChecklist ? 'edit' : 'flow'}',
+                  ),
+                  progressCurrentStep: progressCurrentStep,
+                  totalSteps: progressTotalSteps,
+                  currentStep: _currentStep,
                   onBack: _isCreatingAccount ? null : _prevStep,
                   jobuMessage: _jobuMessage,
                   child: _buildStep(),
@@ -381,9 +512,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         );
 
       case OnboardingStep.profileIntro:
-        return StepProfileIntro(
-          onNext: _handleStepComplete,
-        );
+        return StepProfileIntro(onNext: _handleStepComplete);
 
       case OnboardingStep.resume:
         return StepResume(

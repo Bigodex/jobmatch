@@ -80,6 +80,24 @@ class AuthService {
   }
 
   // =====================================================
+  // UPDATE CURRENT USER EMAIL
+  // -----------------------------------------------------
+  // Solicita a alteração do e-mail do usuário autenticado
+  // =====================================================
+  Future<void> updateCurrentUserEmail(String newEmail) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'user-not-authenticated',
+        message: 'Nenhum usuário autenticado.',
+      );
+    }
+
+    await user.verifyBeforeUpdateEmail(newEmail.trim());
+  }
+
+  // =====================================================
   // LOGOUT
   // -----------------------------------------------------
   // Encerra a sessão do usuário

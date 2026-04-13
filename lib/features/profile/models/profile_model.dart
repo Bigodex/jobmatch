@@ -50,7 +50,7 @@ class ProfileModel {
               avatarUrl: '',
               coverUrl: '',
               connections: 0,
-              views: 0,
+              views: 0, email: '',
             ),
       resume: map['resume'] != null
           ? ResumeModel.fromMap(Map<String, dynamic>.from(map['resume']))

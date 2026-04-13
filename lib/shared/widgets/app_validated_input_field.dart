@@ -6,6 +6,12 @@
 // - erro   -> borda vermelha + exclamação
 // - válido -> borda primary + check
 // Suporta trailing customizado, como botão de olho da senha
+// -------------------------------------------------------
+// Ajuste:
+// - aceita focusNode
+// - aceita onEditingComplete
+// - aceita onTapOutside
+// - textarea: validação no topo superior direito
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -28,6 +34,9 @@ class AppValidatedInputField extends StatelessWidget {
   final Widget? trailing;
   final Iterable<String>? autofillHints;
   final TextAlign textAlign;
+  final FocusNode? focusNode;
+  final VoidCallback? onEditingComplete;
+  final void Function(PointerDownEvent)? onTapOutside;
 
   const AppValidatedInputField({
     super.key,
@@ -47,6 +56,9 @@ class AppValidatedInputField extends StatelessWidget {
     this.trailing,
     this.autofillHints,
     this.textAlign = TextAlign.start,
+    this.focusNode,
+    this.onEditingComplete,
+    this.onTapOutside,
   });
 
   @override
@@ -54,6 +66,9 @@ class AppValidatedInputField extends StatelessWidget {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
     final errorColor = theme.colorScheme.error;
+
+    final isMultilineField =
+        !obscureText && ((maxLines ?? 1) > 1 || (minLines ?? 1) > 1);
 
     OutlineInputBorder border(
       Color color, {
@@ -83,24 +98,36 @@ class AppValidatedInputField extends StatelessWidget {
             : null;
 
     Widget? suffixIcon;
-    if (validationIcon != null || trailing != null) {
-      suffixIcon = Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (validationIcon != null)
-              Padding(
-                padding: EdgeInsets.only(
-                  left: trailing != null ? 8 : 10,
-                  right: trailing != null ? 6 : 10,
-                ),
-                child: validationIcon,
-              ),
-            if (trailing != null) trailing!,
-          ],
-        ),
-      );
+
+    if (isMultilineField) {
+      if (validationIcon != null) {
+        suffixIcon = Padding(
+          padding: const EdgeInsets.only(top: 10, right: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              validationIcon,
+            ],
+          ),
+        );
+      }
+    } else {
+      if (validationIcon != null || trailing != null) {
+        suffixIcon = Padding(
+          padding: const EdgeInsets.only(right: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (trailing != null) trailing!,
+              if (trailing != null && validationIcon != null)
+                const SizedBox(width: 6),
+              if (validationIcon != null) validationIcon,
+            ],
+          ),
+        );
+      }
     }
 
     final OutlineInputBorder enabledBorder = hasError
@@ -115,6 +142,7 @@ class AppValidatedInputField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       maxLength: maxLength,
       minLines: obscureText ? 1 : minLines,
       maxLines: obscureText ? 1 : maxLines,
@@ -127,6 +155,8 @@ class AppValidatedInputField extends StatelessWidget {
       textAlign: textAlign,
       style: const TextStyle(fontSize: 13),
       onChanged: onChanged,
+      onEditingComplete: onEditingComplete,
+      onTapOutside: onTapOutside,
       decoration: InputDecoration(
         hintText: hint,
         counterText: maxLength != null ? '' : null,

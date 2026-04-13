@@ -515,7 +515,7 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
                     Row(
                       children: [
                         SvgPicture.asset(
-                          AppIcons.code,
+                          AppIcons.laptop,
                           width: 20,
                           height: 20,
                         ),

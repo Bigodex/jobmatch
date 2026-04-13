@@ -4,9 +4,9 @@
 // Idiomas do onboarding
 // - Mais idiomas
 // - Bandeiras persistidas no model
-// - Sem atualizar provider no initState
-// - Validação Jobu para nível muito baixo
-// - Validação visual com borda transparente/sem volume
+// - Validação visual ativa em tempo real
+// - Primeiro item padrão já nasce validado
+// - Novo item adicionado já aparece com validação correta
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -61,8 +61,6 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
   };
 
   late List<LanguageModel> _languages;
-  bool _showValidation = false;
-
 
   @override
   void initState() {
@@ -97,6 +95,10 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
     return !_isLanguageLevelInvalid(lang);
   }
 
+  bool _hasInvalidLanguages() {
+    return _languages.any(_isLanguageLevelInvalid);
+  }
+
   Future<void> _addLanguage() async {
     final availableLanguages = _languagesMap.keys
         .where((name) => !_languages.any((e) => e.name == name))
@@ -123,6 +125,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
         );
       });
 
+      widget.onJobuMessageChange(null);
       _sync();
     }
   }
@@ -356,6 +359,10 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
       _languages.removeAt(index);
     });
 
+    if (!_hasInvalidLanguages()) {
+      widget.onJobuMessageChange(null);
+    }
+
     _sync();
   }
 
@@ -370,14 +377,14 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
       );
     });
 
+    if (!_hasInvalidLanguages()) {
+      widget.onJobuMessageChange(null);
+    }
+
     _sync();
   }
 
   void _continue() {
-    setState(() {
-      _showValidation = true;
-    });
-
     final invalidLanguage = _languages.cast<LanguageModel?>().firstWhere(
           (lang) => lang != null && _isLanguageLevelInvalid(lang),
           orElse: () => null,
@@ -408,6 +415,30 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
   String _getFlag(LanguageModel lang) {
     if (lang.flag.trim().isNotEmpty) return lang.flag;
     return _languagesMap[lang.name] ?? '🌍';
+  }
+
+  Widget _buildValidationIcon({
+    required BuildContext context,
+    required bool isInvalid,
+    required bool isValid,
+  }) {
+    if (isInvalid) {
+      return Icon(
+        Icons.error_outline_rounded,
+        size: 20,
+        color: Theme.of(context).colorScheme.error,
+      );
+    }
+
+    if (isValid) {
+      return Icon(
+        Icons.check_circle_rounded,
+        size: 20,
+        color: Theme.of(context).colorScheme.primary,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   @override
@@ -489,8 +520,8 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
 
   Widget _item(LanguageModel lang, int index) {
     final theme = Theme.of(context);
-    final isInvalid = _showValidation && _isLanguageLevelInvalid(lang);
-    final isValid = _showValidation && _isLanguageLevelValid(lang);
+    final isInvalid = _isLanguageLevelInvalid(lang);
+    final isValid = _isLanguageLevelValid(lang);
 
     final borderColor = isInvalid
         ? theme.colorScheme.error
@@ -509,7 +540,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: borderColor,
-          width: isInvalid || isValid ? 1.5 : 1,
+          width: 1.5,
         ),
       ),
       child: Column(
@@ -537,29 +568,28 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
                   ],
                 ),
               ),
-              if (isInvalid)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.error_outline_rounded,
-                    size: 20,
-                    color: theme.colorScheme.error,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (lang.name != 'Português')
+                    IconButton(
+                      onPressed: () => _removeLanguage(index),
+                      icon: const Icon(Icons.delete, size: 18),
+                    ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: Padding(
+                      key: ValueKey('${lang.name}-${lang.level}'),
+                      padding: const EdgeInsets.only(right: 6),
+                      child: _buildValidationIcon(
+                        context: context,
+                        isInvalid: isInvalid,
+                        isValid: isValid,
+                      ),
+                    ),
                   ),
-                ),
-              if (isValid)
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Icon(
-                    Icons.check_circle_rounded,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              if (lang.name != 'Português')
-                IconButton(
-                  onPressed: () => _removeLanguage(index),
-                  icon: const Icon(Icons.delete, size: 18),
-                ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 8),

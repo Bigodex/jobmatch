@@ -2,7 +2,6 @@
 // STEP PASSWORD / ACCOUNT
 // =======================================================
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,8 +37,6 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
   bool _emailHasError = false;
   bool _passwordHasError = false;
   bool _confirmPasswordHasError = false;
-  bool _emailAlreadyInUse = false;
-  bool _isCheckingEmail = false;
 
   @override
   void initState() {
@@ -69,14 +66,10 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
     return value.trim().length >= 6;
   }
 
-  bool get _isEmailFormatValid {
+  bool get _isEmailValid {
     final value = email.text.trim();
     if (value.isEmpty) return false;
     return _isValidEmail(value);
-  }
-
-  bool get _isEmailValid {
-    return _isEmailFormatValid && !_emailAlreadyInUse;
   }
 
   bool get _isPasswordValid {
@@ -95,25 +88,12 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
     return passwordValue == confirmValue;
   }
 
-  Future<bool> _checkIfEmailAlreadyExists(String emailValue) async {
-    try {
-      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
-        emailValue,
-      );
-
-      return methods.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<void> _validateAndProceed() async {
+  void _validateAndProceed() {
     final emailValue = email.text.trim();
     final passwordValue = password.text.trim();
     final confirmValue = confirmPassword.text.trim();
 
     setState(() {
-      _emailAlreadyInUse = false;
       _emailHasError = emailValue.isEmpty || !_isValidEmail(emailValue);
       _passwordHasError =
           passwordValue.isEmpty || !_hasMinPasswordLength(passwordValue);
@@ -132,29 +112,6 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
     if (!_isValidEmail(emailValue)) {
       widget.onJobuMessageChange(
         'Hum… esse e-mail não parece válido.',
-      );
-      return;
-    }
-
-    setState(() {
-      _isCheckingEmail = true;
-    });
-
-    final alreadyExists = await _checkIfEmailAlreadyExists(emailValue);
-
-    if (!mounted) return;
-
-    setState(() {
-      _isCheckingEmail = false;
-      _emailAlreadyInUse = alreadyExists;
-      if (alreadyExists) {
-        _emailHasError = true;
-      }
-    });
-
-    if (alreadyExists) {
-      widget.onJobuMessageChange(
-        'Esse e-mail já está cadastrado. Use outro ou faça login.',
       );
       return;
     }
@@ -205,8 +162,9 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 12, 12, 12),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
         child: SvgPicture.asset(
           obscure ? AppIcons.eyeclosed : AppIcons.eye,
           width: 18,
@@ -215,22 +173,6 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
             theme.colorScheme.onSurface.withOpacity(0.6),
             BlendMode.srcIn,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmailTrailing() {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 12, 12, 12),
-      child: SizedBox(
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: theme.colorScheme.primary,
         ),
       ),
     );
@@ -291,15 +233,12 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                         hint: 'Digite seu email',
                         keyboardType: TextInputType.emailAddress,
                         autofillHints: const [AutofillHints.email],
-                        hasError: _emailHasError || _emailAlreadyInUse,
+                        hasError: _emailHasError,
                         isValid: _isEmailValid,
-                        trailing: _isCheckingEmail ? _buildEmailTrailing() : null,
                         onChanged: (_) {
                           setState(() {
-                            _emailAlreadyInUse = false;
-
-                            if (_emailHasError || _isEmailFormatValid) {
-                              _emailHasError = !_isEmailFormatValid;
+                            if (_emailHasError) {
+                              _emailHasError = !_isEmailValid;
                             }
                           });
                           widget.onJobuMessageChange(null);
@@ -384,7 +323,7 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isCheckingEmail ? null : _validateAndProceed,
+                        onPressed: _validateAndProceed,
                         child: const Text('Continuar'),
                       ),
                     ),
