@@ -2,6 +2,9 @@
 // SOFT SKILL MODEL
 // -------------------------------------------------------
 // Habilidades comportamentais
+// - fromMap
+// - toMap
+// - copyWith
 // =======================================================
 
 class SoftSkillModel {
@@ -25,5 +28,15 @@ class SoftSkillModel {
       'title': title,
       'description': description,
     };
+  }
+
+  SoftSkillModel copyWith({
+    String? title,
+    String? description,
+  }) {
+    return SoftSkillModel(
+      title: title ?? this.title,
+      description: description ?? this.description,
+    );
   }
 }

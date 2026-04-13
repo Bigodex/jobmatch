@@ -5,9 +5,13 @@
 // - Layout no mesmo modelo de soft skills
 // - Labels + ícones acima dos campos
 // - Validações faladas pelo Jobu
+// - Validação visual com shared input
 // - Primeiro item fixo, não removível
 // - Não permite continuar sem preencher ao menos uma habilidade
+// - Cada habilidade precisa ter ao menos uma tag
+// - Não permite nível 0
 // - Contadores ocultos
+// - Slider de nível ajustado de 25 em 25
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -20,6 +24,7 @@ import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart';
 import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 // =======================================================
 // TEXT FORMATTER
@@ -83,6 +88,10 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
   late List<List<String>> tools;
   late List<TextEditingController> tagControllers;
 
+  bool _validationTriggered = false;
+  Set<int> _tagAddValidationIndexes = {};
+  Set<int> _pendingTagIndexes = {};
+
   @override
   void initState() {
     super.initState();
@@ -108,12 +117,10 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
         .toList();
 
     levels = initialSkills
-        .map((e) => e.level.toDouble())
+        .map((e) => e.level < 25 ? 25.0 : e.level.toDouble())
         .toList();
 
-    tools = initialSkills
-        .map((e) => List<String>.from(e.tools))
-        .toList();
+    tools = initialSkills.map((e) => List<String>.from(e.tools)).toList();
 
     tagControllers = List.generate(
       initialSkills.length,
@@ -194,7 +201,7 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
   void _removeSkill(int index) {
     if (index == 0) {
       _showJobuMessage(
-        'O primeiro item é fixo para \nte orientar.',
+        'O primeiro item é fixo para te orientar.',
       );
       return;
     }
@@ -207,6 +214,16 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
       levels.removeAt(index);
       tools.removeAt(index);
       tagControllers.removeAt(index);
+
+      _tagAddValidationIndexes = _tagAddValidationIndexes
+          .where((i) => i != index)
+          .map((i) => i > index ? i - 1 : i)
+          .toSet();
+
+      _pendingTagIndexes = _pendingTagIndexes
+          .where((i) => i != index)
+          .map((i) => i > index ? i - 1 : i)
+          .toSet();
     });
 
     _sync();
@@ -215,31 +232,143 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
 
   void _updateLevel(int index, double value) {
     setState(() {
-      levels[index] = value;
+      levels[index] = value < 25 ? 25 : value;
     });
 
     _sync();
     widget.onJobuMessageChange(null);
   }
 
+  bool _isTitleValid(String value) {
+    return value.trim().length >= 2;
+  }
+
+  bool _isDuplicateTitleAt(int index) {
+    final current = titles[index].text.trim().toLowerCase();
+    if (current.isEmpty) return false;
+
+    final occurrences = titles.where((controller) {
+      return controller.text.trim().toLowerCase() == current;
+    }).length;
+
+    return occurrences > 1;
+  }
+
+  bool _isSkillCompletelyEmpty(int index) {
+    return titles[index].text.trim().isEmpty &&
+        tools[index].isEmpty &&
+        tagControllers[index].text.trim().isEmpty;
+  }
+
+  bool _skillHasAnyContent(int index) {
+    return titles[index].text.trim().isNotEmpty ||
+        tools[index].isNotEmpty ||
+        tagControllers[index].text.trim().isNotEmpty;
+  }
+
+  bool _titleHasError(int index) {
+    if (!_validationTriggered) return false;
+
+    final title = titles[index].text.trim();
+    final hasAnyContent = _skillHasAnyContent(index);
+
+    final allSkillsEmpty =
+        List.generate(titles.length, (i) => _isSkillCompletelyEmpty(i))
+            .every((item) => item);
+
+    if (allSkillsEmpty && index == 0) {
+      return true;
+    }
+
+    if (!hasAnyContent) {
+      return false;
+    }
+
+    return title.isEmpty || !_isTitleValid(title) || _isDuplicateTitleAt(index);
+  }
+
+  bool _titleIsValidState(int index) {
+    final value = titles[index].text.trim();
+    if (value.isEmpty) return false;
+    return _isTitleValid(value) && !_isDuplicateTitleAt(index);
+  }
+
+  bool _tagAlreadyExists(int index, String value) {
+    final normalized = value.trim().toLowerCase();
+
+    return tools[index].any(
+      (tool) => tool.trim().toLowerCase() == normalized,
+    );
+  }
+
+  bool _tagFieldHasError(int index) {
+    final value = tagControllers[index].text.trim();
+    final hasAnyContent = _skillHasAnyContent(index);
+
+    if (_pendingTagIndexes.contains(index) && value.isNotEmpty) {
+      return true;
+    }
+
+    if (_tagAddValidationIndexes.contains(index)) {
+      if (value.isEmpty) return true;
+      if (value.length < 2) return true;
+      if (_tagAlreadyExists(index, value)) return true;
+    }
+
+    if (_validationTriggered && hasAnyContent && tools[index].isEmpty) {
+      if (value.isEmpty) return true;
+      if (value.length < 2) return true;
+      if (_tagAlreadyExists(index, value)) return true;
+    }
+
+    return false;
+  }
+
+  bool _tagFieldIsValid(int index) {
+    final value = tagControllers[index].text.trim();
+
+    if (tools[index].isNotEmpty &&
+        value.isEmpty &&
+        !_pendingTagIndexes.contains(index)) {
+      return true;
+    }
+
+    if (value.isEmpty) return false;
+    if (_pendingTagIndexes.contains(index)) return false;
+    if (value.length < 2) return false;
+    if (_tagAlreadyExists(index, value)) return false;
+
+    return true;
+  }
+
   void _addTool(int index) {
     final value = tagControllers[index].text.trim();
 
     if (value.isEmpty) {
+      setState(() {
+        _tagAddValidationIndexes.add(index);
+      });
+
       _showJobuMessage('Digite uma tag antes de adicionar.');
       return;
     }
 
     if (value.length < 2) {
+      setState(() {
+        _tagAddValidationIndexes.add(index);
+      });
+
       _showJobuMessage('Essa tag está curta demais.');
       return;
     }
 
-    final exists = tools[index].any(
-      (tool) => tool.toLowerCase() == value.toLowerCase(),
-    );
+    final exists = _tagAlreadyExists(index, value);
 
     if (exists) {
+      setState(() {
+        _tagAddValidationIndexes.add(index);
+      });
+
       _showJobuMessage('Essa tag já foi adicionada.');
       return;
     }
@@ -247,6 +376,8 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
     setState(() {
       tools[index].add(TechSkillTextInputFormatter._toTitleCase(value));
       tagControllers[index].clear();
+      _tagAddValidationIndexes.remove(index);
+      _pendingTagIndexes.remove(index);
     });
 
     _sync();
@@ -263,11 +394,24 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
   }
 
   void _handleContinue() {
+    setState(() {
+      _validationTriggered = true;
+    });
+
     final hasPendingTag = tagControllers.any(
       (controller) => controller.text.trim().isNotEmpty,
     );
 
     if (hasPendingTag) {
+      setState(() {
+        _pendingTagIndexes = {};
+        for (int i = 0; i < tagControllers.length; i++) {
+          if (tagControllers[i].text.trim().isNotEmpty) {
+            _pendingTagIndexes.add(i);
+          }
+        }
+      });
+
       _showJobuMessage(
         'Você digitou uma tag e ainda não adicionou.',
       );
@@ -289,7 +433,7 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
 
     if (filledSkills.isEmpty) {
       _showJobuMessage(
-        'Preencha pelo menos uma \nhabilidade ou clique em pular.',
+        'Preencha pelo menos uma habilidade ou clique em pular.',
       );
       return;
     }
@@ -297,13 +441,29 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
     for (final skill in filledSkills) {
       if (skill.title.isEmpty) {
         _showJobuMessage(
-          'Preencha o nome da habilidade \nou remova o item vazio.',
+          'Preencha o nome da habilidade ou remova o item vazio.',
         );
         return;
       }
 
       if (skill.title.length < 2) {
-        _showJobuMessage('O nome da habilidade está \ncurto demais.');
+        _showJobuMessage(
+          'O nome da habilidade está curto demais.',
+        );
+        return;
+      }
+
+      if (skill.level < 25) {
+        _showJobuMessage(
+          'O nível da habilidade não pode ser abaixo de 25%.',
+        );
+        return;
+      }
+
+      if (skill.tools.isEmpty) {
+        _showJobuMessage(
+          'Adicione pelo menos uma tag para a habilidade "${skill.title}".',
+        );
         return;
       }
     }
@@ -313,7 +473,9 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
         .toList();
 
     if (normalizedTitles.toSet().length != normalizedTitles.length) {
-      _showJobuMessage('Você adicionou habilidades \nrepetidas.');
+      _showJobuMessage(
+        'Você adicionou habilidades \nrepetidas.',
+      );
       return;
     }
 
@@ -400,7 +562,7 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
                             onPressed: _handleSkip,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: theme.colorScheme.primary.withOpacity(0.3),
+                                color: theme.colorScheme.primary,
                               ),
                               foregroundColor: theme.colorScheme.primary,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -434,120 +596,134 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
     final theme = Theme.of(context);
     final isFixedItem = index == 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                SvgPicture.asset(
-                  AppIcons.code,
-                  width: 16,
-                  height: 16,
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _fieldLabel(
+                  icon: AppIcons.paint,
+                  label: 'Nome da Habilidade',
                 ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Habilidade',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(width: 8),
+              Opacity(
+                opacity: isFixedItem ? 0.35 : 1,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  child: IconButton(
+                    tooltip: isFixedItem ? 'Item fixo' : 'Remover habilidade',
+                    onPressed: () => _removeSkill(index),
+                    icon: SvgPicture.asset(
+                      AppIcons.trash,
+                      width: 18,
+                      height: 18,
+                      colorFilter: ColorFilter.mode(
+                        theme.iconTheme.color ?? Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
-            Opacity(
-              opacity: isFixedItem ? 0.35 : 1,
-              child: IconButton(
-                onPressed: () => _removeSkill(index),
-                icon: const Icon(Icons.delete, size: 18),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        _fieldLabel(
-          icon: AppIcons.paint,
-          label: 'Nome da Habilidade',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: titles[index],
-          hint: 'Ex: Flutter',
-          maxLength: 40,
-          inputFormatters: [
-            TechSkillTextInputFormatter(),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          icon: AppIcons.hardskillsitem,
-          label: 'Nível da Habilidade',
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Nível: ${levels[index].toInt()}',
-          style: const TextStyle(fontSize: 14),
-        ),
-        Slider(
-          value: levels[index],
-          min: 0,
-          max: 100,
-          divisions: 20,
-          onChanged: (value) => _updateLevel(index, value),
-        ),
-
-        const SizedBox(height: 4),
-
-        _fieldLabel(
-          icon: AppIcons.hashtag,
-          label: 'Tags da Habilidade',
-        ),
-        const SizedBox(height: 8),
-
-        if (tools[index].isNotEmpty) ...[
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: List.generate(
-              tools[index].length,
-              (toolIndex) => _tagChip(
-                label: tools[index][toolIndex],
-                onRemove: () => _removeTool(index, toolIndex),
-              ),
-            ),
+            ],
           ),
-          const SizedBox(height: 14),
-        ],
-
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: _inputField(
-                controller: tagControllers[index],
-                hint: 'Adicionar Tag',
-                maxLength: 20,
-                inputFormatters: [
-                  TechSkillTextInputFormatter(),
-                ],
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: titles[index],
+            hint: 'Ex: Flutter',
+            maxLength: 40,
+            hasError: _titleHasError(index),
+            isValid: _titleIsValidState(index),
+            inputFormatters: [
+              TechSkillTextInputFormatter(),
+            ],
+            onChanged: (_) {
+              widget.onJobuMessageChange(null);
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _fieldLabel(
+            icon: AppIcons.hardskillsitem,
+            label: 'Nível da Habilidade',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Nível: ${levels[index].toInt()}',
+            style: const TextStyle(fontSize: 14),
+          ),
+          Slider(
+            value: levels[index],
+            min: 25,
+            max: 100,
+            divisions: 3,
+            label: levels[index].toInt().toString(),
+            onChanged: (value) => _updateLevel(index, value),
+          ),
+          const SizedBox(height: 4),
+          _fieldLabel(
+            icon: AppIcons.hashtag,
+            label: 'Tags da Habilidade',
+          ),
+          const SizedBox(height: 8),
+          if (tools[index].isNotEmpty) ...[
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: List.generate(
+                tools[index].length,
+                (toolIndex) => _tagChip(
+                  label: tools[index][toolIndex],
+                  onRemove: () => _removeTool(index, toolIndex),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: () => _addTool(index),
-              icon: Icon(
-                Icons.add,
-                size: 28,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+            const SizedBox(height: 14),
           ],
-        ),
-      ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: AppValidatedInputField(
+                  controller: tagControllers[index],
+                  hint: 'Adicionar Tag',
+                  maxLength: 20,
+                  hasError: _tagFieldHasError(index),
+                  isValid: _tagFieldIsValid(index),
+                  inputFormatters: [
+                    TechSkillTextInputFormatter(),
+                  ],
+                  onChanged: (_) {
+                    widget.onJobuMessageChange(null);
+                    setState(() {});
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _addTool(index),
+                icon: Icon(
+                  Icons.add,
+                  size: 28,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -571,48 +747,6 @@ class _StepHardSkillsState extends ConsumerState<StepHardSkills> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    required int maxLength,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: controller,
-      maxLength: maxLength,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        hintText: hint,
-        counterText: '',
-        hintStyle: const TextStyle(fontSize: 13),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: 1.5,
-          ),
-        ),
-      ),
-      onChanged: (_) {
-        widget.onJobuMessageChange(null);
-        setState(() {});
-      },
     );
   }
 

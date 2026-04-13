@@ -1,6 +1,14 @@
 // =======================================================
-// USER DOCUMENT MODEL (PADRÃO ISO STRING)
+// USER DOCUMENT MODEL
+// -------------------------------------------------------
+// Documento do usuário
+// - padrão ISO string
+// - fromMap
+// - toMap
+// - copyWith com sentinela para campos anuláveis
 // =======================================================
+
+const Object _unset = Object();
 
 class UserDocumentModel {
   final String cpf;
@@ -18,7 +26,7 @@ class UserDocumentModel {
     return UserDocumentModel(
       cpf: map['cpf'] ?? '',
       birthDate: map['birthDate'] != null
-          ? DateTime.tryParse(map['birthDate'])
+          ? DateTime.tryParse(map['birthDate'].toString())
           : null,
     );
   }
@@ -38,11 +46,13 @@ class UserDocumentModel {
   // =======================================================
   UserDocumentModel copyWith({
     String? cpf,
-    DateTime? birthDate,
+    Object? birthDate = _unset,
   }) {
     return UserDocumentModel(
       cpf: cpf ?? this.cpf,
-      birthDate: birthDate ?? this.birthDate,
+      birthDate: identical(birthDate, _unset)
+          ? this.birthDate
+          : birthDate as DateTime?,
     );
   }
 }

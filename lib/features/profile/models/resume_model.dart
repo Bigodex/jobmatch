@@ -5,14 +5,15 @@
 //
 // ✔ Campos opcionais
 // ✔ Labels dinâmicas
-// ✔ copyWith correto (🔥 importante)
+// ✔ copyWith com sentinela para campos anuláveis
 // =======================================================
+
+const Object _unset = Object();
 
 class ResumeModel {
   final DateTime? birthDate;
   final String? city;
   final String? description;
-
   final ResumeLabels labels;
 
   ResumeModel({
@@ -28,12 +29,12 @@ class ResumeModel {
   factory ResumeModel.fromMap(Map<String, dynamic> map) {
     return ResumeModel(
       birthDate: map['birthDate'] != null
-          ? DateTime.tryParse(map['birthDate'])
+          ? DateTime.tryParse(map['birthDate'].toString())
           : null,
-      city: map['city'],
-      description: map['description'],
+      city: map['city']?.toString(),
+      description: map['description']?.toString(),
       labels: map['labels'] != null
-          ? ResumeLabels.fromMap(map['labels'])
+          ? ResumeLabels.fromMap(Map<String, dynamic>.from(map['labels']))
           : ResumeLabels.defaultLabels(),
     );
   }
@@ -51,18 +52,24 @@ class ResumeModel {
   }
 
   // =======================================================
-  // COPY WITH (🔥 ESSENCIAL)
+  // COPY WITH
+  // -------------------------------------------------------
+  // Permite limpar campos anuláveis com null
   // =======================================================
   ResumeModel copyWith({
-    DateTime? birthDate,
-    String? city,
-    String? description,
+    Object? birthDate = _unset,
+    Object? city = _unset,
+    Object? description = _unset,
     ResumeLabels? labels,
   }) {
     return ResumeModel(
-      birthDate: birthDate ?? this.birthDate,
-      city: city ?? this.city,
-      description: description ?? this.description,
+      birthDate: identical(birthDate, _unset)
+          ? this.birthDate
+          : birthDate as DateTime?,
+      city: identical(city, _unset) ? this.city : city as String?,
+      description: identical(description, _unset)
+          ? this.description
+          : description as String?,
       labels: labels ?? this.labels,
     );
   }
@@ -124,7 +131,7 @@ class ResumeLabels {
   }
 
   // =======================================================
-  // COPY WITH (opcional mas útil)
+  // COPY WITH
   // =======================================================
   ResumeLabels copyWith({
     String? title,

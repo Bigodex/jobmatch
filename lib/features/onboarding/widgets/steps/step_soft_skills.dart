@@ -12,6 +12,7 @@
 // - Contadores ocultos
 // - Primeiro item fixo, não removível
 // - Não permite continuar sem preencher ao menos uma habilidade
+// - Validação visual com shared input
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart';
 import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 // =======================================================
 // TITLE / DESCRIPTION FORMATTER
@@ -84,6 +86,8 @@ class StepSoftSkills extends ConsumerStatefulWidget {
 class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
   late List<TextEditingController> titles;
   late List<TextEditingController> descriptions;
+
+  bool _validationTriggered = false;
 
   @override
   void initState() {
@@ -187,7 +191,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
   void _removeSkill(int index) {
     if (index == 0) {
       _showJobuMessage(
-        'O primeiro item é fixo para \nte orientar.',
+        'O primeiro item é fixo para te orientar.',
       );
       return;
     }
@@ -204,7 +208,89 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
     widget.onJobuMessageChange(null);
   }
 
+  bool _isTitleValid(String value) {
+    return value.trim().length >= 2;
+  }
+
+  bool _isDescriptionValid(String value) {
+    return value.trim().length >= 10;
+  }
+
+  bool _isSkillCompletelyEmpty(int index) {
+    return titles[index].text.trim().isEmpty &&
+        descriptions[index].text.trim().isEmpty;
+  }
+
+  bool _isDuplicateTitleAt(int index) {
+    final current = titles[index].text.trim().toLowerCase();
+    if (current.isEmpty) return false;
+
+    final occurrences = titles.where((controller) {
+      return controller.text.trim().toLowerCase() == current;
+    }).length;
+
+    return occurrences > 1;
+  }
+
+  bool _titleHasError(int index) {
+    if (!_validationTriggered) return false;
+
+    final title = titles[index].text.trim();
+    final description = descriptions[index].text.trim();
+    final hasAnyContent = title.isNotEmpty || description.isNotEmpty;
+    final allSkillsEmpty =
+        List.generate(titles.length, (i) => _isSkillCompletelyEmpty(i))
+            .every((item) => item);
+
+    if (allSkillsEmpty && index == 0) {
+      return true;
+    }
+
+    if (!hasAnyContent) {
+      return false;
+    }
+
+    return title.isEmpty || !_isTitleValid(title) || _isDuplicateTitleAt(index);
+  }
+
+  bool _descriptionHasError(int index) {
+    if (!_validationTriggered) return false;
+
+    final title = titles[index].text.trim();
+    final description = descriptions[index].text.trim();
+    final hasAnyContent = title.isNotEmpty || description.isNotEmpty;
+    final allSkillsEmpty =
+        List.generate(titles.length, (i) => _isSkillCompletelyEmpty(i))
+            .every((item) => item);
+
+    if (allSkillsEmpty && index == 0) {
+      return true;
+    }
+
+    if (!hasAnyContent) {
+      return false;
+    }
+
+    return description.isEmpty || !_isDescriptionValid(description);
+  }
+
+  bool _titleIsValidState(int index) {
+    final value = titles[index].text.trim();
+    if (value.isEmpty) return false;
+    return _isTitleValid(value) && !_isDuplicateTitleAt(index);
+  }
+
+  bool _descriptionIsValidState(int index) {
+    final value = descriptions[index].text.trim();
+    if (value.isEmpty) return false;
+    return _isDescriptionValid(value);
+  }
+
   void _handleContinue() {
+    setState(() {
+      _validationTriggered = true;
+    });
+
     final rawSkills = List.generate(
       titles.length,
       (index) => SoftSkillModel(
@@ -221,7 +307,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
 
     if (filledSkills.isEmpty) {
       _showJobuMessage(
-        'Preencha pelo menos uma \nhabilidade ou clica em pular.',
+        'Preencha pelo menos uma habilidade ou clica em pular.',
       );
       return;
     }
@@ -229,24 +315,28 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
     for (final skill in filledSkills) {
       if (skill.title.isEmpty) {
         _showJobuMessage(
-          'Preencha o título da habilidade \nou remova o item vazio.',
+          'Preencha o título da habilidade ou remova o item vazio.',
         );
         return;
       }
 
       if (skill.title.length < 2) {
-        _showJobuMessage('O título da habilidade está \ncurto demais.');
+        _showJobuMessage(
+          'O título da habilidade está curto demais.',
+        );
         return;
       }
 
       if (skill.description.isEmpty) {
-        _showJobuMessage('Descreva melhor a habilidade \n"${skill.title}".');
+        _showJobuMessage(
+          'Descreva melhor a habilidade "${skill.title}".',
+        );
         return;
       }
 
       if (skill.description.length < 10) {
         _showJobuMessage(
-          'A descrição de "${skill.title}" \nestá curta demais.',
+          'A descrição de "${skill.title}" está curta demais.',
         );
         return;
       }
@@ -257,7 +347,9 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
         .toList();
 
     if (normalizedTitles.toSet().length != normalizedTitles.length) {
-      _showJobuMessage('Você adicionou habilidades \nrepetidas.');
+      _showJobuMessage(
+        'Você adicionou habilidades repetidas.',
+      );
       return;
     }
 
@@ -344,7 +436,7 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
                             onPressed: _handleSkip,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: theme.colorScheme.primary.withOpacity(1.0),
+                                color: theme.colorScheme.primary,
                               ),
                               foregroundColor: theme.colorScheme.primary,
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -376,72 +468,92 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
 
   Widget _skillItem(int index) {
     final isFixedItem = index == 0;
+    final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                SvgPicture.asset(
-                  AppIcons.softskills,
-                  width: 16,
-                  height: 16,
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _fieldLabel(
+                  icon: AppIcons.softskillsitem,
+                  label: 'Nome da Habilidade',
                 ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Habilidade',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(width: 8),
+              Opacity(
+                opacity: isFixedItem ? 0.35 : 1,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  child: IconButton(
+                    tooltip: isFixedItem ? 'Item fixo' : 'Remover habilidade',
+                    onPressed: () => _removeSkill(index),
+                    icon: SvgPicture.asset(
+                      AppIcons.trash,
+                      width: 18,
+                      height: 18,
+                      colorFilter: ColorFilter.mode(
+                        theme.iconTheme.color ?? Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
-            Opacity(
-              opacity: isFixedItem ? 0.35 : 1,
-              child: IconButton(
-                onPressed: () => _removeSkill(index),
-                icon: const Icon(Icons.delete, size: 18),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        _fieldLabel(
-          icon: AppIcons.softskillsitem,
-          label: 'Nome da Habilidade',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: titles[index],
-          hint: 'Ex: Comunicação',
-          maxLength: 40,
-          inputFormatters: [
-            SoftSkillTextInputFormatter(),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          icon: AppIcons.info,
-          label: 'Descrição da Habilidade',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: descriptions[index],
-          hint: 'Descreva essa habilidade...',
-          minLines: 3,
-          maxLength: 200,
-          textAlign: TextAlign.justify,
-          inputFormatters: [
-            SoftSkillTextInputFormatter(),
-          ],
-        ),
-      ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: titles[index],
+            hint: 'Ex: Comunicação',
+            maxLength: 40,
+            hasError: _titleHasError(index),
+            isValid: _titleIsValidState(index),
+            inputFormatters: [
+              SoftSkillTextInputFormatter(),
+            ],
+            onChanged: (_) {
+              widget.onJobuMessageChange(null);
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+          _fieldLabel(
+            icon: AppIcons.info,
+            label: 'Descrição da Habilidade',
+          ),
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: descriptions[index],
+            hint: 'Descreva essa habilidade...',
+            minLines: 3,
+            maxLines: null,
+            maxLength: 200,
+            textAlign: TextAlign.justify,
+            keyboardType: TextInputType.multiline,
+            hasError: _descriptionHasError(index),
+            isValid: _descriptionIsValidState(index),
+            inputFormatters: [
+              SoftSkillTextInputFormatter(),
+            ],
+            onChanged: (_) {
+              widget.onJobuMessageChange(null);
+              setState(() {});
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -465,54 +577,6 @@ class _StepSoftSkillsState extends ConsumerState<StepSoftSkills> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    int? minLines,
-    required int maxLength,
-    TextAlign textAlign = TextAlign.start,
-    List<TextInputFormatter>? inputFormatters,
-  }) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: controller,
-      minLines: minLines ?? 1,
-      maxLines: null,
-      maxLength: maxLength,
-      keyboardType: TextInputType.multiline,
-      textAlign: textAlign,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontSize: 13),
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: 1.5,
-          ),
-        ),
-      ),
-      onChanged: (_) {
-        widget.onJobuMessageChange(null);
-        setState(() {});
-      },
     );
   }
 }

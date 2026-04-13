@@ -13,6 +13,7 @@ import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart'
 
 // SHARED
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_selector_field.dart';
 
 class StepSpecialty extends ConsumerStatefulWidget {
   final VoidCallback onNext;
@@ -29,8 +30,8 @@ class StepSpecialty extends ConsumerStatefulWidget {
 }
 
 class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
-
   final List<String> _selected = [];
+  bool _hasSelectionError = false;
 
   final List<String> _options = [
     'UI/UX Designer',
@@ -43,21 +44,16 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
     'DevOps Engineer',
   ];
 
-  // ===================================================
-  // INIT (🔥 REHIDRATA DO PROVIDER)
-  // ===================================================
   @override
   void initState() {
     super.initState();
 
     final data = ref.read(onboardingProvider);
-
-    _selected.addAll(data.specialties);
+    if (data.specialties.isNotEmpty) {
+      _selected.add(data.specialties.first);
+    }
   }
 
-  // ===================================================
-  // ICONS
-  // ===================================================
   String _getIcon(String option) {
     switch (option) {
       case 'UI/UX Designer':
@@ -81,36 +77,370 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
     }
   }
 
-  // ===================================================
-  // SELECT
-  // ===================================================
-  void _toggleSelection(String option) {
+  void _sync() {
+    ref.read(onboardingProvider.notifier).setSpecialties(
+          List<String>.from(_selected),
+        );
+  }
+
+  void _removeSelection(String option) {
     setState(() {
-      if (_selected.contains(option)) {
-        _selected.remove(option);
-      } else {
+      _selected.remove(option);
+    });
 
-        if (_selected.length >= 3) {
-          widget.onJobuMessageChange(
-            'Ei 😅 você só pode escolher \naté 3 especialidades.',
-          );
+    _sync();
+  }
 
-          Future.delayed(const Duration(seconds: 6), () {
-            if (mounted) {
-              widget.onJobuMessageChange(null);
-            }
-          });
+  void _continue() {
+    final isValid = _selected.isNotEmpty;
 
-          return;
-        }
+    setState(() {
+      _hasSelectionError = !isValid;
+    });
 
-        _selected.add(option);
+    if (!isValid) {
+      widget.onJobuMessageChange(
+        'Selecione sua especialidade para continuar!',
+      );
+      return;
+    }
+
+    widget.onJobuMessageChange(null);
+    widget.onNext();
+  }
+
+  Future<void> _openSpecialtyModal() async {
+    final result = await _showSpecialtySelectionModal(
+      title: 'Selecionar especialidade',
+      searchHint: 'Buscar especialidade',
+      options: _options,
+      currentSelected: List<String>.from(_selected),
+    );
+
+    if (result == null) return;
+
+    setState(() {
+      _selected
+        ..clear()
+        ..addAll(result);
+
+      if (_selected.isNotEmpty) {
+        _hasSelectionError = false;
       }
     });
 
-    // 🔥 SALVA NO PROVIDER
-    ref.read(onboardingProvider.notifier).setSpecialties(
-      List.from(_selected),
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  Future<List<String>?> _showSpecialtySelectionModal({
+    required String title,
+    required String searchHint,
+    required List<String> options,
+    required List<String> currentSelected,
+  }) async {
+    return showDialog<List<String>>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final colors = theme.extension<AppColorsExtension>()!;
+        final searchController = TextEditingController();
+        final tempSelected = List<String>.from(currentSelected);
+        List<String> filtered = List<String>.from(options);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void applyFilter(String value) {
+              final query = value.trim().toLowerCase();
+
+              setModalState(() {
+                if (query.isEmpty) {
+                  filtered = List<String>.from(options);
+                } else {
+                  filtered = options.where((item) {
+                    return item.toLowerCase().contains(query);
+                  }).toList();
+                }
+              });
+            }
+
+            void toggleOption(String option) {
+              setModalState(() {
+                if (tempSelected.contains(option)) {
+                  tempSelected.remove(option);
+                  return;
+                }
+
+                tempSelected
+                  ..clear()
+                  ..add(option);
+              });
+            }
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 24,
+              ),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: 460,
+                  maxHeight: MediaQuery.of(dialogContext).size.height * 0.74,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.cardTertiary,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.28),
+                      blurRadius: 28,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 14, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => Navigator.of(dialogContext).pop(),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 20,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: applyFilter,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: searchHint,
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.04),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${tempSelected.length}/1 selecionada',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.06),
+                    ),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  'Nenhuma especialidade encontrada.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.70),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Scrollbar(
+                              thumbVisibility: true,
+                              radius: const Radius.circular(999),
+                              child: ListView.separated(
+                                padding: const EdgeInsets.all(14),
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final option = filtered[index];
+                                  final isSelected =
+                                      tempSelected.contains(option);
+
+                                  return InkWell(
+                                    onTap: () => toggleOption(option),
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 180),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 14,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                                .withOpacity(0.12)
+                                            : Colors.white.withOpacity(0.035),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? theme.colorScheme.primary
+                                                  .withOpacity(0.50)
+                                              : Colors.white.withOpacity(0.06),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: isSelected
+                                                  ? theme.colorScheme.primary
+                                                      .withOpacity(0.18)
+                                                  : Colors.white
+                                                      .withOpacity(0.05),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                            child: Center(
+                                              child: SvgPicture.asset(
+                                                _getIcon(option),
+                                                width: 18,
+                                                height: 18,
+                                                color: isSelected
+                                                    ? theme.colorScheme.primary
+                                                    : Colors.white70,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              option,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            isSelected
+                                                ? Icons.check_circle_rounded
+                                                : Icons.add_circle_outline_rounded,
+                                            color: isSelected
+                                                ? theme.colorScheme.primary
+                                                : Colors.white.withOpacity(0.35),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(0.10),
+                                ),
+                                foregroundColor: Colors.white70,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop(tempSelected);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text('Concluir'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -125,13 +455,10 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           const SizedBox(height: 24),
-
           AppSectionCard(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-
               child: Container(
                 padding: const EdgeInsets.only(
                   left: 12,
@@ -143,17 +470,16 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
                   color: colors.cardTertiary,
                   borderRadius: BorderRadius.circular(16),
                 ),
-
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     const SizedBox(height: 8),
 
+                    // HEADER
                     Row(
                       children: [
                         SvgPicture.asset(
-                          AppIcons.briefcase,
+                          AppIcons.nodes,
                           width: 20,
                           height: 20,
                         ),
@@ -176,83 +502,97 @@ class _StepSpecialtyState extends ConsumerState<StepSpecialty> {
                     ),
                     const SizedBox(height: 16),
 
-                    Column(
-                      children: _options.map((option) {
-                        final isSelected = _selected.contains(option);
+                    // LABEL DO CAMPO
+                    Row(
+                      children: [
+                        SvgPicture.asset(
+                          AppIcons.role,
+                          width: 16,
+                          height: 16,
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Selecione Sua Especialidade',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
 
-                        return GestureDetector(
-                          onTap: () => _toggleSelection(option),
+                    const SizedBox(height: 8),
 
-                          child: Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 10),
+                    AppValidatedSelectorField(
+                      hint: 'Selecionar especialidade',
+                      value: _selected.isEmpty ? null : _selected.first,
+                      selectedIcon:
+                          _selected.isEmpty ? null : _getIcon(_selected.first),
+                      hasError: _hasSelectionError,
+                      isValid: _isValid,
+                      onTap: _openSpecialtyModal,
+                    ),
+
+                    if (_selected.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _selected.map((option) {
+                          return Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
+                              horizontal: 10,
+                              vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.04),
-                              borderRadius: BorderRadius.circular(10),
+                              color:
+                                  theme.colorScheme.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: isSelected
-                                    ? theme.colorScheme.primary
-                                    : Colors.white24,
-                                width: 1.2,
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.24),
                               ),
                             ),
-
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-
                                 SvgPicture.asset(
                                   _getIcon(option),
-                                  width: 18,
-                                  height: 18,
-                                  color: isSelected
-                                      ? theme.colorScheme.primary
-                                      : AppTheme.textSecondary,
+                                  width: 14,
+                                  height: 14,
+                                  color: theme.colorScheme.primary,
                                 ),
-
-                                const SizedBox(width: 12),
-
-                                Expanded(
-                                  child: Text(
-                                    option,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isSelected
-                                          ? theme.colorScheme.primary
-                                          : AppTheme.textPrimary,
-                                      fontWeight: isSelected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 18,
+                                const SizedBox(width: 6),
+                                Text(
+                                  option,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                     color: theme.colorScheme.primary,
                                   ),
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: () => _removeSelection(option),
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
 
                     const SizedBox(height: 20),
 
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isValid
-                            ? () {
-                                widget.onNext();
-                              }
-                            : null,
+                        onPressed: _continue,
                         child: const Text('Continuar'),
                       ),
                     ),

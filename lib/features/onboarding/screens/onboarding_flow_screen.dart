@@ -4,6 +4,7 @@
 
 // ignore_for_file: dead_code
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +74,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   bool _isCreatingAccount = false;
 
   // ===================================================
-  // NAVEGAÇÃO
+  // MODO EDIÇÃO VINDO DO CHECKLIST
+  // ===================================================
+  bool _isEditingFromChecklist = false;
+
+  // ===================================================
+  // NAVEGAÇÃO NORMAL
   // ===================================================
   void _nextStep() {
     setState(() {
@@ -94,7 +100,50 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     });
   }
 
+  // ===================================================
+  // FINALIZAR EDIÇÃO E VOLTAR AO CHECKLIST
+  // ===================================================
+  void _finishChecklistEdit() {
+    setState(() {
+      _isEditingFromChecklist = false;
+      _currentStep = OnboardingStep.checklist;
+      _jobuMessage = null;
+    });
+  }
+
+  // ===================================================
+  // CONTINUE DOS STEPS
+  // ===================================================
+  void _handleStepComplete() {
+    if (_isEditingFromChecklist) {
+      _finishChecklistEdit();
+      return;
+    }
+
+    _nextStep();
+  }
+
+  // ===================================================
+  // SKIP DOS STEPS OPCIONAIS
+  // ===================================================
+  void _handleStepSkip() {
+    if (_isEditingFromChecklist) {
+      _finishChecklistEdit();
+      return;
+    }
+
+    _nextStep();
+  }
+
+  // ===================================================
+  // VOLTAR
+  // ===================================================
   void _prevStep() {
+    if (_isEditingFromChecklist) {
+      _finishChecklistEdit();
+      return;
+    }
+
     if (_currentStep == OnboardingStep.name) {
       context.go('/welcome');
       return;
@@ -107,10 +156,75 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   }
 
   // ===================================================
+  // ABRIR STEP PELO CHECKLIST
+  // ===================================================
+  void _goToChecklistStep(String stepKey) {
+    if (_isCreatingAccount) return;
+
+    late final OnboardingStep targetStep;
+
+    switch (stepKey) {
+      case 'name':
+      case 'birthDate':
+      case 'identification':
+        targetStep = OnboardingStep.name;
+        break;
+
+      case 'specialty':
+        targetStep = OnboardingStep.specialty;
+        break;
+
+      case 'languages':
+        targetStep = OnboardingStep.languages;
+        break;
+
+      case 'account':
+        targetStep = OnboardingStep.account;
+        break;
+
+      case 'resume':
+        targetStep = OnboardingStep.resume;
+        break;
+
+      case 'softSkills':
+        targetStep = OnboardingStep.softSkills;
+        break;
+
+      case 'hardSkills':
+        targetStep = OnboardingStep.hardSkills;
+        break;
+
+      case 'experience':
+        targetStep = OnboardingStep.experience;
+        break;
+
+      case 'education':
+        targetStep = OnboardingStep.education;
+        break;
+
+      case 'links':
+        targetStep = OnboardingStep.links;
+        break;
+
+      default:
+        targetStep = OnboardingStep.name;
+        break;
+    }
+
+    setState(() {
+      _isEditingFromChecklist = true;
+      _currentStep = targetStep;
+      _jobuMessage = null;
+    });
+  }
+
+  // ===================================================
   // CREATE ACCOUNT
   // ===================================================
-  Future<void> _createAccount() async {
-    if (_isCreatingAccount) return;
+  Future<ChecklistCreateAccountResult> _createAccount() async {
+    if (_isCreatingAccount) {
+      return ChecklistCreateAccountResult.error;
+    }
 
     final onboarding = ref.read(onboardingProvider);
 
@@ -128,7 +242,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         _jobuMessage =
             'Ainda falta um ou mais campos obrigatórios para criar sua conta.';
       });
-      return;
+      return ChecklistCreateAccountResult.error;
     }
 
     setState(() {
@@ -173,21 +287,51 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       ref.invalidate(profileProvider);
       ref.read(onboardingProvider.notifier).reset();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return ChecklistCreateAccountResult.success;
+      }
 
       setState(() {
         _isCreatingAccount = false;
+        _isEditingFromChecklist = false;
         _jobuMessage = null;
       });
 
       context.go('/home');
+      return ChecklistCreateAccountResult.success;
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) {
+        return e.code == 'email-already-in-use'
+            ? ChecklistCreateAccountResult.emailAlreadyInUse
+            : ChecklistCreateAccountResult.error;
+      }
+
+      if (e.code == 'email-already-in-use') {
+        setState(() {
+          _isCreatingAccount = false;
+          _jobuMessage = null;
+        });
+
+        return ChecklistCreateAccountResult.emailAlreadyInUse;
+      }
+
+      setState(() {
+        _isCreatingAccount = false;
+        _jobuMessage = 'Não consegui criar sua conta. ${e.message ?? e.code}';
+      });
+
+      return ChecklistCreateAccountResult.error;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return ChecklistCreateAccountResult.error;
+      }
 
       setState(() {
         _isCreatingAccount = false;
         _jobuMessage = 'Não consegui criar sua conta. ${e.toString()}';
       });
+
+      return ChecklistCreateAccountResult.error;
     }
   }
 
@@ -209,7 +353,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: OnboardingLayout(
-                  key: ValueKey(_currentStep),
+                  key: ValueKey(
+                    '${_currentStep.name}-${_isEditingFromChecklist ? 'edit' : 'flow'}',
+                  ),
                   currentStep: _currentStep.index,
                   totalSteps: OnboardingStep.values.length,
                   onBack: _isCreatingAccount ? null : _prevStep,
@@ -231,7 +377,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     switch (_currentStep) {
       case OnboardingStep.name:
         return StepIdentification(
-          onNext: _nextStep,
+          onNext: _handleStepComplete,
           onJobuMessageChange: (msg) {
             setState(() {
               _jobuMessage = msg;
@@ -241,7 +387,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
       case OnboardingStep.specialty:
         return StepSpecialty(
-          onNext: _nextStep,
+          onNext: _handleStepComplete,
           onJobuMessageChange: (msg) {
             setState(() {
               _jobuMessage = msg;
@@ -251,7 +397,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
       case OnboardingStep.languages:
         return StepLanguages(
-          onNext: _nextStep,
+          onNext: _handleStepComplete,
           onJobuMessageChange: (msg) {
             setState(() {
               _jobuMessage = msg;
@@ -261,89 +407,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 
       case OnboardingStep.account:
         return StepPassword(
-          onNext: _nextStep,
+          onNext: _handleStepComplete,
           onJobuMessageChange: (msg) {
             setState(() {
               _jobuMessage = msg;
             });
-          },
-        );
-
-      case OnboardingStep.profileIntro:
-        return StepProfileIntro(
-          onNext: _nextStep,
-        );
-
-      case OnboardingStep.resume:
-        return StepResume(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.softSkills:
-        return StepSoftSkills(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.hardSkills:
-        return StepHardSkills(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.experience:
-        return StepExperience(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.education:
-        return StepEducation(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.links:
-        return StepLinks(
-          onNext: _nextStep,
-          onSkip: _nextStep,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
-        );
-
-      case OnboardingStep.checklist:
-        return StepChecklist(
-          onCreateAccount: _createAccount,
-        );
-    }
-  }
-}

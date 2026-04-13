@@ -2,8 +2,10 @@
 // SOCIAL LINK MODEL
 // -------------------------------------------------------
 // Links externos (GitHub, Behance, etc)
-// - Suporte a lista
-// - Pronto para Firestore
+// - fromMap
+// - toMap
+// - helpers de lista
+// - copyWith
 // =======================================================
 
 class SocialLinkModel {
@@ -36,23 +38,37 @@ class SocialLinkModel {
   }
 
   // =======================================================
+  // COPY WITH
+  // =======================================================
+  SocialLinkModel copyWith({
+    String? label,
+    String? url,
+  }) {
+    return SocialLinkModel(
+      label: label ?? this.label,
+      url: url ?? this.url,
+    );
+  }
+
+  // =======================================================
   // LIST FROM MAP
   // =======================================================
   static List<SocialLinkModel> fromList(List<dynamic>? list) {
     if (list == null) return [];
 
     return list
-        .map((e) => SocialLinkModel.fromMap(
-              Map<String, dynamic>.from(e),
-            ))
+        .map(
+          (e) => SocialLinkModel.fromMap(
+            Map<String, dynamic>.from(e),
+          ),
+        )
         .toList();
   }
 
   // =======================================================
   // LIST TO MAP
   // =======================================================
-  static List<Map<String, dynamic>> toList(
-      List<SocialLinkModel> links) {
+  static List<Map<String, dynamic>> toList(List<SocialLinkModel> links) {
     return links.map((e) => e.toMap()).toList();
   }
 }

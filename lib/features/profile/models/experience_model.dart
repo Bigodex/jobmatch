@@ -2,12 +2,12 @@
 // EXPERIENCE MODEL
 // -------------------------------------------------------
 // Experiências profissionais
-//
-// Inclui:
-// - logo da empresa (logoUrl)
 // - parsing seguro
-// - estrutura pronta para backend (Firestore/API)
+// - toMap / fromMap
+// - copyWith com sentinela para campos anuláveis
 // =======================================================
+
+const Object _unset = Object();
 
 class ExperienceModel {
   final String company;
@@ -27,31 +27,26 @@ class ExperienceModel {
   });
 
   // =======================================================
-  // FROM MAP (seguro contra null / erro de parse)
+  // FROM MAP
   // =======================================================
-
   factory ExperienceModel.fromMap(Map<String, dynamic> map) {
     return ExperienceModel(
       company: map['company'] ?? '',
       role: map['role'] ?? '',
       description: map['description'] ?? '',
-
       startDate: map['startDate'] != null
-          ? DateTime.tryParse(map['startDate']) ?? DateTime.now()
+          ? DateTime.tryParse(map['startDate'].toString()) ?? DateTime.now()
           : DateTime.now(),
-
       endDate: map['endDate'] != null
-          ? DateTime.tryParse(map['endDate'])
+          ? DateTime.tryParse(map['endDate'].toString())
           : null,
-
-      logoUrl: map['logoUrl'],
+      logoUrl: map['logoUrl']?.toString(),
     );
   }
 
   // =======================================================
-  // TO MAP (pronto para salvar no banco)
+  // TO MAP
   // =======================================================
-
   Map<String, dynamic> toMap() {
     return {
       'company': company,
@@ -64,24 +59,25 @@ class ExperienceModel {
   }
 
   // =======================================================
-  // COPY WITH (útil pra updates)
+  // COPY WITH
+  // -------------------------------------------------------
+  // Permite limpar campos anuláveis com null
   // =======================================================
-
   ExperienceModel copyWith({
     String? company,
     String? role,
     String? description,
     DateTime? startDate,
-    DateTime? endDate,
-    String? logoUrl,
+    Object? endDate = _unset,
+    Object? logoUrl = _unset,
   }) {
     return ExperienceModel(
       company: company ?? this.company,
       role: role ?? this.role,
       description: description ?? this.description,
       startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      logoUrl: logoUrl ?? this.logoUrl,
+      endDate: identical(endDate, _unset) ? this.endDate : endDate as DateTime?,
+      logoUrl: identical(logoUrl, _unset) ? this.logoUrl : logoUrl as String?,
     );
   }
 }

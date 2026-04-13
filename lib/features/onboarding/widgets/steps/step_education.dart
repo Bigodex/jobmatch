@@ -1,25 +1,33 @@
 // =======================================================
 // STEP EDUCATION
 // -------------------------------------------------------
-// Experiências acadêmicas no onboarding
+// Formações no onboarding
 // - Mesmo modelo de experience
 // - Labels + ícones acima dos campos
 // - Primeiro item fixo, não removível
 // - Validações faladas pelo Jobu
-// - Sem validação para URL do logo
+// - Validação visual com shared input
+// - Logo como picker de imagem da galeria
+// - Datas digitáveis em MM/AAAA
+// - Checkbox de curso atual
+// - Cálculo visual do período
 // - Contadores ocultos
 // =======================================================
+
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart';
 import 'package:jobmatch/features/profile/models/education_model.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 // =======================================================
 // TEXT FORMATTERS
@@ -92,6 +100,41 @@ class EducationDescriptionInputFormatter extends TextInputFormatter {
   }
 }
 
+// =======================================================
+// MONTH / YEAR FORMATTER
+// =======================================================
+class MonthYearInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 6) {
+      digits = digits.substring(0, 6);
+    }
+
+    final formatted = _formatMonthYear(digits);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  static String _formatMonthYear(String digits) {
+    if (digits.isEmpty) return '';
+
+    if (digits.length <= 2) {
+      return digits;
+    }
+
+    return '${digits.substring(0, 2)}/${digits.substring(2)}';
+  }
+}
+
 class StepEducation extends ConsumerStatefulWidget {
   final VoidCallback onNext;
   final VoidCallback onSkip;
@@ -109,65 +152,106 @@ class StepEducation extends ConsumerStatefulWidget {
 }
 
 class _StepEducationState extends ConsumerState<StepEducation> {
+  static final DateTime _storageEmptyDate = DateTime(1900, 1, 1);
+
   late List<TextEditingController> institutions;
   late List<TextEditingController> courses;
   late List<TextEditingController> descriptions;
-  late List<TextEditingController> logoUrls;
+  late List<TextEditingController> startDateControllers;
+  late List<TextEditingController> endDateControllers;
 
-  late List<DateTime> startDates;
+  late List<String?> logoImages;
+  late List<DateTime?> startDates;
   late List<DateTime?> endDates;
+  late List<bool> isCurrentStudies;
+
+  final ImagePicker _imagePicker = ImagePicker();
+
+  bool _validationTriggered = false;
 
   @override
   void initState() {
     super.initState();
 
     final onboarding = ref.read(onboardingProvider);
+    final educations = onboarding.education;
 
-    final initialEducations = onboarding.education.isNotEmpty
-        ? onboarding.education
-        : [
-            EducationModel(
-              institution: '',
-              course: '',
-              description: '',
-              startDate: DateTime.now(),
-              endDate: null,
-              logoUrl: null,
+    if (educations.isNotEmpty) {
+      institutions = educations
+          .map(
+            (e) => TextEditingController(
+              text: EducationTitleInputFormatter._toTitleCase(e.institution),
             ),
-          ];
+          )
+          .toList();
 
-    institutions = initialEducations
-        .map(
-          (e) => TextEditingController(
-            text: EducationTitleInputFormatter._toTitleCase(e.institution),
-          ),
-        )
-        .toList();
-
-    courses = initialEducations
-        .map(
-          (e) => TextEditingController(
-            text: EducationTitleInputFormatter._toTitleCase(e.course),
-          ),
-        )
-        .toList();
-
-    descriptions = initialEducations
-        .map(
-          (e) => TextEditingController(
-            text: EducationDescriptionInputFormatter._capitalizeFirst(
-              e.description,
+      courses = educations
+          .map(
+            (e) => TextEditingController(
+              text: EducationTitleInputFormatter._toTitleCase(e.course),
             ),
-          ),
-        )
-        .toList();
+          )
+          .toList();
 
-    logoUrls = initialEducations
-        .map((e) => TextEditingController(text: e.logoUrl ?? ''))
-        .toList();
+      descriptions = educations
+          .map(
+            (e) => TextEditingController(
+              text: EducationDescriptionInputFormatter._capitalizeFirst(
+                e.description,
+              ),
+            ),
+          )
+          .toList();
 
-    startDates = initialEducations.map((e) => e.startDate).toList();
-    endDates = initialEducations.map((e) => e.endDate).toList();
+      logoImages = educations
+          .map((e) => (e.logoUrl?.trim().isEmpty ?? true) ? null : e.logoUrl)
+          .toList();
+
+      startDates = educations
+          .map((e) => _isStorageEmptyDate(e.startDate) ? null : e.startDate)
+          .toList();
+
+      endDates = educations.map((e) => e.endDate).toList();
+
+      isCurrentStudies = educations.map((e) {
+        final hasContent = e.institution.trim().isNotEmpty ||
+            e.course.trim().isNotEmpty ||
+            e.description.trim().isNotEmpty ||
+            (e.logoUrl?.trim().isNotEmpty ?? false) ||
+            !_isStorageEmptyDate(e.startDate);
+
+        return hasContent && e.endDate == null;
+      }).toList();
+
+      startDateControllers = startDates
+          .map(
+            (date) => TextEditingController(
+              text: date != null ? _formatMonthYear(date) : '',
+            ),
+          )
+          .toList();
+
+      endDateControllers = List.generate(
+        endDates.length,
+        (index) => TextEditingController(
+          text: isCurrentStudies[index]
+              ? ''
+              : (endDates[index] != null
+                  ? _formatMonthYear(endDates[index]!)
+                  : ''),
+        ),
+      );
+    } else {
+      institutions = [TextEditingController()];
+      courses = [TextEditingController()];
+      descriptions = [TextEditingController()];
+      startDateControllers = [TextEditingController()];
+      endDateControllers = [TextEditingController()];
+      logoImages = [null];
+      startDates = [null];
+      endDates = [null];
+      isCurrentStudies = [false];
+    }
 
     for (final controller in institutions) {
       controller.addListener(_handleFieldChanged);
@@ -180,10 +264,14 @@ class _StepEducationState extends ConsumerState<StepEducation> {
     for (final controller in descriptions) {
       controller.addListener(_handleFieldChanged);
     }
+  }
 
-    for (final controller in logoUrls) {
-      controller.addListener(_handleFieldChanged);
-    }
+  bool _isStorageEmptyDate(DateTime? date) {
+    if (date == null) return false;
+
+    return date.year == _storageEmptyDate.year &&
+        date.month == _storageEmptyDate.month &&
+        date.day == _storageEmptyDate.day;
   }
 
   @override
@@ -200,7 +288,11 @@ class _StepEducationState extends ConsumerState<StepEducation> {
       controller.dispose();
     }
 
-    for (final controller in logoUrls) {
+    for (final controller in startDateControllers) {
+      controller.dispose();
+    }
+
+    for (final controller in endDateControllers) {
       controller.dispose();
     }
 
@@ -223,110 +315,206 @@ class _StepEducationState extends ConsumerState<StepEducation> {
     });
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.month.toString().padLeft(2, '0')}/${date.year}';
+  DateTime? _parseMonthYear(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length != 6) return null;
+
+    final month = int.tryParse(digits.substring(0, 2));
+    final year = int.tryParse(digits.substring(2, 6));
+
+    if (month == null || year == null) return null;
+    if (month < 1 || month > 12) return null;
+    if (year < 1970) return null;
+
+    return DateTime(year, month, 1);
   }
 
-  List<EducationModel> _buildEducations() {
+  String _formatMonthYear(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    return '$month/${date.year}';
+  }
+
+  void _onStartDateChanged(int index, String value) {
+    final parsed = _parseMonthYear(value);
+
+    setState(() {
+      startDates[index] = parsed;
+
+      if (parsed != null &&
+          endDates[index] != null &&
+          endDates[index]!.isBefore(parsed)) {
+        endDates[index] = null;
+        endDateControllers[index].clear();
+      }
+    });
+
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  void _onEndDateChanged(int index, String value) {
+    final parsed = _parseMonthYear(value);
+
+    setState(() {
+      endDates[index] = parsed;
+    });
+
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  bool _isEducationTouched(int index) {
+    return institutions[index].text.trim().isNotEmpty ||
+        courses[index].text.trim().isNotEmpty ||
+        descriptions[index].text.trim().isNotEmpty ||
+        startDateControllers[index].text.trim().isNotEmpty ||
+        endDateControllers[index].text.trim().isNotEmpty ||
+        (logoImages[index]?.trim().isNotEmpty ?? false) ||
+        startDates[index] != null ||
+        endDates[index] != null ||
+        isCurrentStudies[index];
+  }
+
+  bool get _allEducationsEmpty {
+    return !List.generate(institutions.length, (index) => _isEducationTouched(index))
+        .contains(true);
+  }
+
+  bool _shouldValidateItem(int index) {
+    if (!_validationTriggered) return false;
+
+    if (_allEducationsEmpty) {
+      return index == 0;
+    }
+
+    return _isEducationTouched(index);
+  }
+
+  bool _isInstitutionValid(int index) {
+    return institutions[index].text.trim().length >= 2;
+  }
+
+  bool _isCourseValid(int index) {
+    return courses[index].text.trim().length >= 2;
+  }
+
+  bool _isDescriptionValid(int index) {
+    return descriptions[index].text.trim().length >= 10;
+  }
+
+  bool _isStartDateValid(int index) {
+    final text = startDateControllers[index].text.trim();
+    if (text.isEmpty) return false;
+    return _parseMonthYear(text) != null;
+  }
+
+  bool _isEndDateValid(int index) {
+    if (isCurrentStudies[index]) return true;
+
+    final text = endDateControllers[index].text.trim();
+    if (text.isEmpty) return false;
+
+    final parsedEnd = _parseMonthYear(text);
+    final parsedStart = _parseMonthYear(startDateControllers[index].text.trim());
+
+    if (parsedEnd == null) return false;
+    if (parsedStart != null && parsedEnd.isBefore(parsedStart)) return false;
+
+    return true;
+  }
+
+  bool _institutionHasError(int index) {
+    if (!_shouldValidateItem(index)) return false;
+    return !_isInstitutionValid(index);
+  }
+
+  bool _courseHasError(int index) {
+    if (!_shouldValidateItem(index)) return false;
+    return !_isCourseValid(index);
+  }
+
+  bool _descriptionHasError(int index) {
+    if (!_shouldValidateItem(index)) return false;
+    return !_isDescriptionValid(index);
+  }
+
+  bool _startDateHasError(int index) {
+    if (!_shouldValidateItem(index)) return false;
+    return !_isStartDateValid(index);
+  }
+
+  bool _endDateHasError(int index) {
+    if (!_shouldValidateItem(index)) return false;
+    return !_isEndDateValid(index);
+  }
+
+  bool _institutionIsValidState(int index) {
+    if (!_isEducationTouched(index)) return false;
+    return _isInstitutionValid(index);
+  }
+
+  bool _courseIsValidState(int index) {
+    if (!_isEducationTouched(index)) return false;
+    return _isCourseValid(index);
+  }
+
+  bool _descriptionIsValidState(int index) {
+    if (!_isEducationTouched(index)) return false;
+    return _isDescriptionValid(index);
+  }
+
+  bool _startDateIsValidState(int index) {
+    if (!_isEducationTouched(index)) return false;
+    return _isStartDateValid(index);
+  }
+
+  bool _endDateIsValidState(int index) {
+    if (!_isEducationTouched(index)) return false;
+    return _isEndDateValid(index);
+  }
+
+  List<EducationModel> _buildEducationsForStorage() {
     return List.generate(
       institutions.length,
       (index) => EducationModel(
         institution: institutions[index].text.trim(),
         course: courses[index].text.trim(),
         description: descriptions[index].text.trim(),
-        startDate: startDates[index],
-        endDate: endDates[index],
-        logoUrl: logoUrls[index].text.trim().isEmpty
-            ? null
-            : logoUrls[index].text.trim(),
+        startDate: startDates[index] ?? _storageEmptyDate,
+        endDate: isCurrentStudies[index] ? null : endDates[index],
+        logoUrl: logoImages[index],
       ),
     );
   }
 
   void _sync() {
     ref.read(onboardingProvider.notifier).setEducation(
-          _buildEducations(),
+          _buildEducationsForStorage(),
         );
-  }
-
-  Future<void> _pickStartDate(int index) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: startDates[index],
-      firstDate: DateTime(1980),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-
-    if (picked == null) return;
-
-    setState(() {
-      startDates[index] = picked;
-
-      if (endDates[index] != null && endDates[index]!.isBefore(picked)) {
-        endDates[index] = null;
-      }
-    });
-
-    _sync();
-    widget.onJobuMessageChange(null);
-  }
-
-  Future<void> _pickEndDate(int index) async {
-    final initialDate = endDates[index] ?? DateTime.now();
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(1980),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
-
-    if (picked == null) return;
-
-    if (picked.isBefore(startDates[index])) {
-      _showJobuMessage(
-        'A data de fim não pode ser antes da data de início.',
-      );
-      return;
-    }
-
-    setState(() {
-      endDates[index] = picked;
-    });
-
-    _sync();
-    widget.onJobuMessageChange(null);
-  }
-
-  void _toggleCurrentStudy(int index, bool value) {
-    setState(() {
-      if (value) {
-        endDates[index] = null;
-      }
-    });
-
-    _sync();
-    widget.onJobuMessageChange(null);
   }
 
   void _addEducation() {
     final institutionController = TextEditingController();
     final courseController = TextEditingController();
     final descriptionController = TextEditingController();
-    final logoController = TextEditingController();
+    final startController = TextEditingController();
+    final endController = TextEditingController();
 
     institutionController.addListener(_handleFieldChanged);
     courseController.addListener(_handleFieldChanged);
     descriptionController.addListener(_handleFieldChanged);
-    logoController.addListener(_handleFieldChanged);
 
     setState(() {
       institutions.add(institutionController);
       courses.add(courseController);
       descriptions.add(descriptionController);
-      logoUrls.add(logoController);
-      startDates.add(DateTime.now());
+      startDateControllers.add(startController);
+      endDateControllers.add(endController);
+      logoImages.add(null);
+      startDates.add(null);
       endDates.add(null);
+      isCurrentStudies.add(false);
     });
 
     _sync();
@@ -336,7 +524,7 @@ class _StepEducationState extends ConsumerState<StepEducation> {
   void _removeEducation(int index) {
     if (index == 0) {
       _showJobuMessage(
-        'O primeiro item é fixo para te orientar.',
+        'O primeiro item é fixo para \nte orientar.',
       );
       return;
     }
@@ -344,98 +532,206 @@ class _StepEducationState extends ConsumerState<StepEducation> {
     institutions[index].dispose();
     courses[index].dispose();
     descriptions[index].dispose();
-    logoUrls[index].dispose();
+    startDateControllers[index].dispose();
+    endDateControllers[index].dispose();
 
     setState(() {
       institutions.removeAt(index);
       courses.removeAt(index);
       descriptions.removeAt(index);
-      logoUrls.removeAt(index);
+      startDateControllers.removeAt(index);
+      endDateControllers.removeAt(index);
+      logoImages.removeAt(index);
       startDates.removeAt(index);
       endDates.removeAt(index);
+      isCurrentStudies.removeAt(index);
     });
 
     _sync();
     widget.onJobuMessageChange(null);
   }
 
-  void _handleContinue() {
-    final rawEducations = List.generate(
-      institutions.length,
-      (index) => EducationModel(
-        institution: institutions[index].text.trim(),
-        course: courses[index].text.trim(),
-        description: descriptions[index].text.trim(),
-        startDate: startDates[index],
-        endDate: endDates[index],
-        logoUrl: logoUrls[index].text.trim().isEmpty
-            ? null
-            : logoUrls[index].text.trim(),
-      ),
+  Future<void> _pickLogoImage(int index) async {
+    final pickedFile = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
     );
 
-    final filledEducations = rawEducations.where((item) {
-      return item.institution.isNotEmpty ||
-          item.course.isNotEmpty ||
-          item.description.isNotEmpty ||
-          (item.logoUrl?.isNotEmpty ?? false);
-    }).toList();
+    if (pickedFile == null) return;
 
-    if (filledEducations.isEmpty) {
+    setState(() {
+      logoImages[index] = pickedFile.path;
+    });
+
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  void _removeLogoImage(int index) {
+    setState(() {
+      logoImages[index] = null;
+    });
+
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  void _toggleCurrentStudy(int index, bool? value) {
+    final isCurrent = value ?? false;
+
+    setState(() {
+      isCurrentStudies[index] = isCurrent;
+
+      if (isCurrent) {
+        endDates[index] = null;
+        endDateControllers[index].clear();
+      }
+    });
+
+    widget.onJobuMessageChange(null);
+    _sync();
+  }
+
+  String _calculatePeriod(DateTime start, DateTime end) {
+    final totalMonths =
+        ((end.year - start.year) * 12) + (end.month - start.month);
+
+    if (totalMonths < 0) {
+      return 'Período inválido';
+    }
+
+    if (totalMonths == 0) {
+      return 'Menos de 1 mês';
+    }
+
+    final years = totalMonths ~/ 12;
+    final months = totalMonths % 12;
+
+    if (years > 0 && months > 0) {
+      return '$years ${years == 1 ? 'ano' : 'anos'} e $months ${months == 1 ? 'mês' : 'meses'}';
+    }
+
+    if (years > 0) {
+      return '$years ${years == 1 ? 'ano' : 'anos'}';
+    }
+
+    return '$months ${months == 1 ? 'mês' : 'meses'}';
+  }
+
+  String? _periodLabelFor(int index) {
+    final start = startDates[index];
+
+    if (start == null) return null;
+
+    final end = isCurrentStudies[index] ? DateTime.now() : endDates[index];
+
+    if (end == null) return null;
+
+    if (end.isBefore(start)) {
+      return 'Período inválido';
+    }
+
+    final endLabel = isCurrentStudies[index] ? 'Atual' : _formatMonthYear(end);
+
+    return '${_formatMonthYear(start)} - $endLabel • ${_calculatePeriod(start, end)}';
+  }
+
+  void _handleContinue() {
+    setState(() {
+      _validationTriggered = true;
+    });
+
+    final touchedIndexes = List.generate(institutions.length, (index) => index)
+        .where(_isEducationTouched)
+        .toList();
+
+    if (touchedIndexes.isEmpty) {
       _showJobuMessage(
-        'Preencha pelo menos uma experiência acadêmica \nou clique em pular.',
+        'Preencha pelo menos uma \nformação ou clique em pular.',
       );
       return;
     }
 
-    for (final item in filledEducations) {
-      if (item.institution.isEmpty) {
-        _showJobuMessage('Preencha a instituição ou remova o item vazio.');
+    for (final index in touchedIndexes) {
+      final institution = institutions[index].text.trim();
+      final course = courses[index].text.trim();
+      final description = descriptions[index].text.trim();
+      final startDateText = startDateControllers[index].text.trim();
+      final endDateText = endDateControllers[index].text.trim();
+      final startDate = _parseMonthYear(startDateText);
+      final endDate = _parseMonthYear(endDateText);
+      final isCurrent = isCurrentStudies[index];
+
+      if (institution.isEmpty) {
+        _showJobuMessage('Preencha a instituição ou \nremova o item vazio.');
         return;
       }
 
-      if (item.institution.length < 2) {
-        _showJobuMessage('O nome da instituição está curto demais.');
+      if (institution.length < 2) {
+        _showJobuMessage('O nome da instituição \nestá curto demais.');
         return;
       }
 
-      if (item.course.isEmpty) {
+      if (course.isEmpty) {
+        _showJobuMessage('Preencha o curso da \nformação "$institution".');
+        return;
+      }
+
+      if (course.length < 2) {
         _showJobuMessage(
-          'Preencha o curso da experiência acadêmica ${item.institution}.',
+          'O curso da formação \n"$institution" está curto demais.',
         );
         return;
       }
 
-      if (item.course.length < 2) {
+      if (startDateText.isEmpty || startDate == null) {
         _showJobuMessage(
-          'O curso da experiência acadêmica ${item.institution} está curto demais.',
+          'Digite a data de início em \nMM/AAAA para "$institution".',
         );
         return;
       }
 
-      if (item.description.isEmpty) {
+      if (!isCurrent && (endDateText.isEmpty || endDate == null)) {
         _showJobuMessage(
-          'Descreva sua formação em ${item.institution}.',
+          'Digite a data de fim em MM/AAAA \nou marque "Curso atual" em "$institution".',
         );
         return;
       }
 
-      if (item.description.length < 10) {
+      if (!isCurrent && endDate != null && endDate.isBefore(startDate)) {
         _showJobuMessage(
-          'A descrição de ${item.institution} está curta demais.',
+          'A data de fim não pode ser \nantes da data de início em "$institution".',
         );
         return;
       }
 
-      if (item.endDate != null && item.endDate!.isBefore(item.startDate)) {
+      if (description.isEmpty) {
+        _showJobuMessage('Descreva sua formação \nem "$institution".');
+        return;
+      }
+
+      if (description.length < 10) {
         _showJobuMessage(
-          'A data de fim de ${item.institution} não pode ser antes do início.',
+          'A descrição de \n"$institution" está curta demais.',
         );
         return;
       }
     }
 
-    ref.read(onboardingProvider.notifier).setEducation(filledEducations);
+    final validEducations = touchedIndexes.map((index) {
+      return EducationModel(
+        institution: institutions[index].text.trim(),
+        course: courses[index].text.trim(),
+        description: descriptions[index].text.trim(),
+        startDate: _parseMonthYear(startDateControllers[index].text.trim())!,
+        endDate: isCurrentStudies[index]
+            ? null
+            : _parseMonthYear(endDateControllers[index].text.trim()),
+        logoUrl: logoImages[index],
+      );
+    }).toList();
+
+    ref.read(onboardingProvider.notifier).setEducation(validEducations);
     widget.onJobuMessageChange(null);
     widget.onNext();
   }
@@ -468,18 +764,19 @@ class _StepEducationState extends ConsumerState<StepEducation> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
                     Row(
-                      children: const [
-                        Icon(
-                          Icons.school_outlined,
-                          size: 18,
+                      children: [
+                        SvgPicture.asset(
+                          AppIcons.cap,
+                          width: 20,
+                          height: 20,
                         ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Experiências Acadêmicas',
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Formações',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
                           ),
                         ),
                       ],
@@ -488,7 +785,6 @@ class _StepEducationState extends ConsumerState<StepEducation> {
                     Divider(
                       color: theme.dividerColor.withOpacity(0.2),
                     ),
-                    const SizedBox(height: 12),
                     if (institutions.isNotEmpty)
                       Column(
                         children: List.generate(institutions.length, (index) {
@@ -508,7 +804,7 @@ class _StepEducationState extends ConsumerState<StepEducation> {
                     TextButton.icon(
                       onPressed: _addEducation,
                       icon: const Icon(Icons.add),
-                      label: const Text('Adicionar experiência acadêmica'),
+                      label: const Text('Adicionar formação'),
                     ),
                     const SizedBox(height: 20),
                     Row(
@@ -518,12 +814,10 @@ class _StepEducationState extends ConsumerState<StepEducation> {
                             onPressed: _handleSkip,
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color:
-                                    theme.colorScheme.primary.withOpacity(0.3),
+                                color: theme.colorScheme.primary,
                               ),
                               foregroundColor: theme.colorScheme.primary,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -551,181 +845,354 @@ class _StepEducationState extends ConsumerState<StepEducation> {
   }
 
   Widget _educationItem(int index) {
-    Theme.of(context);
     final isFixedItem = index == 0;
-    final isCurrent = endDates[index] == null;
+    final periodLabel = _periodLabelFor(index);
+    final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: const [
-                Icon(
-                  Icons.school_outlined,
-                  size: 16,
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _fieldLabel(
+                  svgIcon: AppIcons.image,
+                  label: 'Logo da instituição',
                 ),
-                SizedBox(width: 10),
-                Text(
-                  'Experiência Acadêmica',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 8),
+              Opacity(
+                opacity: isFixedItem ? 0.35 : 1,
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  child: IconButton(
+                    tooltip: isFixedItem ? 'Item fixo' : 'Remover formação',
+                    onPressed: () => _removeEducation(index),
+                    icon: SvgPicture.asset(
+                      AppIcons.trash,
+                      width: 18,
+                      height: 18,
+                      colorFilter: ColorFilter.mode(
+                        theme.iconTheme.color ?? Colors.white,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _logoPicker(index),
+          const SizedBox(height: 12),
+          _fieldLabel(
+            svgIcon: AppIcons.buildingfull,
+            label: 'Instituição',
+          ),
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: institutions[index],
+            hint: 'Instituição (ex: UTFPR)',
+            maxLength: 80,
+            hasError: _institutionHasError(index),
+            isValid: _institutionIsValidState(index),
+            inputFormatters: [
+              EducationTitleInputFormatter(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _fieldLabel(
+            svgIcon: AppIcons.role,
+            label: 'Curso',
+          ),
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: courses[index],
+            hint: 'Curso (ex: Análise e Desenvolvimento de Sistemas)',
+            maxLength: 100,
+            hasError: _courseHasError(index),
+            isValid: _courseIsValidState(index),
+            inputFormatters: [
+              EducationTitleInputFormatter(),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(
+                      svgIcon: AppIcons.calendar,
+                      label: 'Data de início',
+                    ),
+                    const SizedBox(height: 8),
+                    AppValidatedInputField(
+                      controller: startDateControllers[index],
+                      hint: 'MM/AAAA',
+                      maxLength: 7,
+                      keyboardType: TextInputType.number,
+                      hasError: _startDateHasError(index),
+                      isValid: _startDateIsValidState(index),
+                      inputFormatters: [
+                        MonthYearInputFormatter(),
+                      ],
+                      onChanged: (value) => _onStartDateChanged(index, value),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel(
+                      svgIcon: AppIcons.calendarcheck,
+                      label: 'Data de fim',
+                    ),
+                    const SizedBox(height: 8),
+                    AppValidatedInputField(
+                      controller: endDateControllers[index],
+                      hint: isCurrentStudies[index] ? 'Atual' : 'MM/AAAA',
+                      maxLength: 7,
+                      enabled: !isCurrentStudies[index],
+                      keyboardType: TextInputType.number,
+                      hasError: _endDateHasError(index),
+                      isValid: _endDateIsValidState(index),
+                      inputFormatters: [
+                        MonthYearInputFormatter(),
+                      ],
+                      onChanged: (value) => _onEndDateChanged(index, value),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            onTap: () => _toggleCurrentStudy(index, !isCurrentStudies[index]),
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Theme(
+                  data: theme.copyWith(
+                    checkboxTheme: CheckboxThemeData(
+                      visualDensity: const VisualDensity(
+                        horizontal: -4,
+                        vertical: -4,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  child: Checkbox(
+                    value: isCurrentStudies[index],
+                    onChanged: (value) => _toggleCurrentStudy(index, value),
+                    activeColor: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'Curso atual',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
-            Opacity(
-              opacity: isFixedItem ? 0.35 : 1,
-              child: IconButton(
-                onPressed: () => _removeEducation(index),
-                icon: const Icon(Icons.delete, size: 18),
+          ),
+          if (periodLabel != null) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      periodLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 10),
-
-        _fieldLabel(
-          icon: AppIcons.building,
-          label: 'Instituição',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: institutions[index],
-          hint: 'Instituição (ex: UTFPR)',
-          maxLength: 80,
-          inputFormatters: [
-            EducationTitleInputFormatter(),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          icon: AppIcons.role,
-          label: 'Curso',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: courses[index],
-          hint: 'Curso (ex: Análise e Desenvolvimento de Sistemas)',
-          maxLength: 100,
-          inputFormatters: [
-            EducationTitleInputFormatter(),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          icon: AppIcons.info,
-          label: 'Descrição',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: descriptions[index],
-          hint: 'Descreva sua formação...',
-          minLines: 3,
-          maxLength: 300,
-          inputFormatters: [
-            EducationDescriptionInputFormatter(),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          materialIcon: Icons.calendar_month_outlined,
-          label: 'Período',
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _dateButton(
-                label: 'Início',
-                value: _formatDate(startDates[index]),
-                onTap: () => _pickStartDate(index),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _dateButton(
-                label: 'Fim',
-                value: isCurrent
-                    ? 'Cursando'
-                    : _formatDate(endDates[index]!),
-                onTap: isCurrent ? null : () => _pickEndDate(index),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        Row(
-          children: [
-            Checkbox(
-              value: isCurrent,
-              onChanged: (value) {
-                _toggleCurrentStudy(index, value ?? false);
-              },
-            ),
-            const Expanded(
-              child: Text(
-                'Ainda estou cursando',
-                style: TextStyle(fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-
-        if (!isCurrent) ...[
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => _pickEndDate(index),
-              icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-              label: const Text('Alterar data de fim'),
-            ),
+          const SizedBox(height: 12),
+          _fieldLabel(
+            svgIcon: AppIcons.info,
+            label: 'Descrição',
+          ),
+          const SizedBox(height: 8),
+          AppValidatedInputField(
+            controller: descriptions[index],
+            hint: 'Descreva sua formação...',
+            minLines: 3,
+            maxLines: null,
+            maxLength: 300,
+            keyboardType: TextInputType.multiline,
+            hasError: _descriptionHasError(index),
+            isValid: _descriptionIsValidState(index),
+            inputFormatters: [
+              EducationDescriptionInputFormatter(),
+            ],
           ),
         ],
-
-        const SizedBox(height: 12),
-
-        _fieldLabel(
-          icon: AppIcons.hashtag,
-          label: 'URL do Logo',
-        ),
-        const SizedBox(height: 8),
-        _inputField(
-          controller: logoUrls[index],
-          hint: 'URL do logo (opcional)',
-          maxLength: 200,
-          keyboardType: TextInputType.url,
-        ),
-      ],
+      ),
     );
   }
 
+  Widget _logoPicker(int index) {
+    final theme = Theme.of(context);
+    final imagePath = logoImages[index];
+    final hasImage = imagePath != null && imagePath.trim().isNotEmpty;
+
+    return GestureDetector(
+      onTap: () => _pickLogoImage(index),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.35),
+                    ),
+                    color: Colors.white.withOpacity(0.05),
+                    image: hasImage
+                        ? DecorationImage(
+                            image: _buildImageProvider(imagePath),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: hasImage
+                      ? null
+                      : Icon(
+                          Icons.camera_alt_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 22,
+                        ),
+                ),
+                if (hasImage)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: GestureDetector(
+                      onTap: () => _removeLogoImage(index),
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Adicione a imagem de LOGO da instituição.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.35,
+                  color: Colors.white.withOpacity(0.88),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ImageProvider _buildImageProvider(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return NetworkImage(path);
+    }
+
+    return FileImage(File(path));
+  }
+
   Widget _fieldLabel({
-    String? icon,
-    IconData? materialIcon,
+    String? svgIcon,
+    IconData? iconData,
     required String label,
   }) {
+    assert(svgIcon != null || iconData != null);
+
+    final theme = Theme.of(context);
+
     return Row(
       children: [
-        if (icon != null)
+        if (svgIcon != null)
           SvgPicture.asset(
-            icon,
+            svgIcon,
             width: 16,
             height: 16,
           )
-        else if (materialIcon != null)
+        else
           Icon(
-            materialIcon,
+            iconData,
             size: 16,
+            color: theme.colorScheme.primary,
           ),
         const SizedBox(width: 8),
         Text(
@@ -736,103 +1203,6 @@ class _StepEducationState extends ConsumerState<StepEducation> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    int? minLines,
-    required int maxLength,
-    List<TextInputFormatter>? inputFormatters,
-    TextInputType? keyboardType,
-  }) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: controller,
-      minLines: minLines ?? 1,
-      maxLines: null,
-      maxLength: maxLength,
-      keyboardType: keyboardType,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(fontSize: 13),
-      decoration: InputDecoration(
-        hintText: hint,
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: 1.5,
-          ),
-        ),
-      ),
-      onChanged: (_) {
-        widget.onJobuMessageChange(null);
-        setState(() {});
-      },
-    );
-  }
-
-  Widget _dateButton({
-    required String label,
-    required String value,
-    VoidCallback? onTap,
-  }) {
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: onTap == null
-                ? Colors.white12
-                : Colors.white24,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white.withOpacity(0.65),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: onTap == null
-                    ? Colors.white.withOpacity(0.75)
-                    : theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

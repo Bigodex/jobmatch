@@ -17,6 +17,7 @@ import 'package:jobmatch/features/profile/models/user_document_model.dart';
 
 // SHARED
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 // =======================================================
 // CPF FORMATTER
@@ -53,6 +54,43 @@ class CpfInputFormatter extends TextInputFormatter {
       return '${digits.substring(0, 3)}.${digits.substring(3, 6)}.${digits.substring(6)}';
     } else {
       return '${digits.substring(0, 3)}.${digits.substring(3, 6)}.${digits.substring(6, 9)}-${digits.substring(9)}';
+    }
+  }
+}
+
+// =======================================================
+// DATE FORMATTER
+// =======================================================
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length > 8) {
+      digits = digits.substring(0, 8);
+    }
+
+    final formatted = _formatDate(digits);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  static String _formatDate(String digits) {
+    if (digits.isEmpty) return '';
+
+    if (digits.length <= 2) {
+      return digits;
+    } else if (digits.length <= 4) {
+      return '${digits.substring(0, 2)}/${digits.substring(2)}';
+    } else {
+      return '${digits.substring(0, 2)}/${digits.substring(2, 4)}/${digits.substring(4)}';
     }
   }
 }
@@ -116,30 +154,52 @@ class StepIdentification extends ConsumerStatefulWidget {
 
 class _StepIdentificationState extends ConsumerState<StepIdentification> {
   late final TextEditingController fullName;
+  late final TextEditingController birthDate;
   late final TextEditingController cpf;
 
   DateTime? _birthDate;
+
+  bool _fullNameHasError = false;
+  bool _birthDateHasError = false;
+  bool _cpfHasError = false;
 
   @override
   void initState() {
     super.initState();
 
     final data = ref.read(onboardingProvider);
-    final savedCpf = data.userDocument?.cpf ?? '';
+    final savedUserDocument = data.userDocument;
+    final savedCpf = savedUserDocument?.cpf ?? '';
+
+    _birthDate = savedUserDocument != null
+        ? savedUserDocument.birthDate
+        : data.birthDate;
 
     fullName = TextEditingController(
       text: FullNameInputFormatter._toTitleCase(data.fullName),
     );
+
+    birthDate = TextEditingController(
+      text: _birthDate != null ? _formatDateInput(_birthDate!) : '',
+    );
+
     cpf = TextEditingController(text: _formatCpf(savedCpf));
-    _birthDate = data.userDocument?.birthDate ?? data.birthDate;
   }
 
   @override
   void dispose() {
     fullName.dispose();
+    birthDate.dispose();
     cpf.dispose();
     super.dispose();
   }
+
+  // ===================================================
+  // GETTERS DE VALIDAÇÃO
+  // ===================================================
+  bool get _isFullNameValid => _hasNameAndLastName(fullName.text.trim());
+  bool get _isBirthDateValid => _tryParseBirthDate(birthDate.text) != null;
+  bool get _isCpfValid => _hasCompleteCpf(cpf.text);
 
   // ===================================================
   // FORMAT CPF
@@ -152,6 +212,17 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
     }
 
     return CpfInputFormatter._formatCpf(digits);
+  }
+
+  // ===================================================
+  // FORMATAR DATA PARA INPUT
+  // ===================================================
+  String _formatDateInput(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+
+    return '$day/$month/$year';
   }
 
   // ===================================================
@@ -173,6 +244,36 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
   bool _hasCompleteCpf(String value) {
     final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
     return digits.length == 11;
+  }
+
+  // ===================================================
+  // PARSE DATA
+  // ===================================================
+  DateTime? _tryParseBirthDate(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.length != 8) return null;
+
+    final day = int.tryParse(digits.substring(0, 2));
+    final month = int.tryParse(digits.substring(2, 4));
+    final year = int.tryParse(digits.substring(4, 8));
+
+    if (day == null || month == null || year == null) return null;
+    if (month < 1 || month > 12) return null;
+    if (year < 1950) return null;
+
+    final parsed = DateTime(year, month, day);
+
+    if (parsed.year != year || parsed.month != month || parsed.day != day) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (parsed.isAfter(today)) return null;
+
+    return parsed;
   }
 
   // ===================================================
@@ -217,41 +318,21 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
     ref.read(onboardingProvider.notifier).setUserDocument(doc);
   }
 
-  // ===================================================
-  // DATE PICKER
-  // ===================================================
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate ?? DateTime(2000),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-    );
-
-    if (picked != null) {
-      setState(() => _birthDate = picked);
-
-      ref.read(onboardingProvider.notifier).setBirthDate(picked);
-      _syncUserDocument();
-      widget.onJobuMessageChange(null);
-    }
-  }
-
   String _formatDate(DateTime date) {
     const months = [
       '',
-      'Janeiro',
-      'Fevereiro',
-      'Março',
-      'Abril',
-      'Maio',
-      'Junho',
-      'Julho',
-      'Agosto',
-      'Setembro',
-      'Outubro',
-      'Novembro',
-      'Dezembro',
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
     ];
 
     return '${date.day} de ${months[date.month]} de ${date.year}';
@@ -262,28 +343,37 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
   // ===================================================
   void _continue() {
     final fullNameValue = fullName.text.trim();
+    final parsedBirthDate = _tryParseBirthDate(birthDate.text);
 
-    if (!_hasNameAndLastName(fullNameValue)) {
+    setState(() {
+      _fullNameHasError = !_hasNameAndLastName(fullNameValue);
+      _birthDateHasError = parsedBirthDate == null;
+      _cpfHasError = !_hasCompleteCpf(cpf.text);
+    });
+
+    if (_fullNameHasError) {
       widget.onJobuMessageChange(
-        'Digite nome e sobrenome no \nmesmo campo.',
+        'Digite nome e sobrenome no mesmo campo.',
       );
       return;
     }
 
-    if (_birthDate == null) {
+    if (_birthDateHasError) {
       widget.onJobuMessageChange(
-        'Preciso da sua data de \nnascimento para continuar!',
+        'Preciso da sua data de nascimento para continuar!',
       );
       return;
     }
 
-    if (!_hasCompleteCpf(cpf.text)) {
+    if (_cpfHasError) {
       widget.onJobuMessageChange(
-        'Preciso do número do seu \nCPF completo!',
+        'Preciso do número do seu CPF completo!',
       );
       return;
     }
 
+    _birthDate = parsedBirthDate;
+    ref.read(onboardingProvider.notifier).setBirthDate(parsedBirthDate!);
     _syncUserDocument();
 
     final splitName = _splitFullName(fullNameValue);
@@ -327,6 +417,7 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
+
                     // HEADER
                     Row(
                       children: [
@@ -357,15 +448,24 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
                     _editItem(
                       icon: AppIcons.user,
                       title: 'Nome Completo',
-                      child: _inputField(
+                      child: AppValidatedInputField(
                         controller: fullName,
                         hint: 'Digite seu nome e sobrenome',
                         maxLength: 60,
+                        hasError: _fullNameHasError,
+                        isValid: _isFullNameValid,
                         textCapitalization: TextCapitalization.words,
                         inputFormatters: [
                           FullNameInputFormatter(),
                         ],
-                        onChanged: (_) {
+                        onChanged: (value) {
+                          setState(() {
+                            if (_fullNameHasError) {
+                              _fullNameHasError =
+                                  !_hasNameAndLastName(value.trim());
+                            }
+                          });
+
                           widget.onJobuMessageChange(null);
                         },
                       ),
@@ -375,33 +475,54 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
 
                     // DATA NASCIMENTO
                     _editItem(
-                      icon: AppIcons.calendar,
+                      icon: AppIcons.cake,
                       title: 'Data de Nascimento',
-                      child: GestureDetector(
-                        onTap: _pickDate,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppValidatedInputField(
+                            controller: birthDate,
+                            hint: 'DD/MM/AAAA',
+                            maxLength: 10,
+                            hasError: _birthDateHasError,
+                            isValid: _isBirthDateValid,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              DateInputFormatter(),
+                            ],
+                            onChanged: (value) {
+                              final parsed = _tryParseBirthDate(value);
+
+                              setState(() {
+                                _birthDate = parsed;
+
+                                if (_birthDateHasError) {
+                                  _birthDateHasError = parsed == null;
+                                }
+                              });
+
+                              if (parsed != null) {
+                                ref
+                                    .read(onboardingProvider.notifier)
+                                    .setBirthDate(parsed);
+                              }
+
+                              _syncUserDocument();
+                              widget.onJobuMessageChange(null);
+                            },
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Text(
-                            _birthDate == null
-                                ? 'Selecionar data'
-                                : _formatDate(_birthDate!),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: _birthDate == null
-                                  ? Colors.white54
-                                  : Colors.white,
+                          if (_birthDate != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              _formatDate(_birthDate!),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.72),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ),
+                          ],
+                        ],
                       ),
                     ),
 
@@ -411,15 +532,23 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
                     _editItem(
                       icon: AppIcons.id2,
                       title: 'CPF',
-                      child: _inputField(
+                      child: AppValidatedInputField(
                         controller: cpf,
                         hint: 'Digite seu CPF',
                         maxLength: 14,
+                        hasError: _cpfHasError,
+                        isValid: _isCpfValid,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           CpfInputFormatter(),
                         ],
-                        onChanged: (_) {
+                        onChanged: (value) {
+                          setState(() {
+                            if (_cpfHasError) {
+                              _cpfHasError = !_hasCompleteCpf(value);
+                            }
+                          });
+
                           _syncUserDocument();
                           widget.onJobuMessageChange(null);
                         },
@@ -441,53 +570,6 @@ class _StepIdentificationState extends ConsumerState<StepIdentification> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ===================================================
-  // INPUT PADRÃO
-  // ===================================================
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    required int maxLength,
-    List<TextInputFormatter>? inputFormatters,
-    ValueChanged<String>? onChanged,
-    TextCapitalization textCapitalization = TextCapitalization.none,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: controller,
-      maxLength: maxLength,
-      inputFormatters: inputFormatters,
-      textCapitalization: textCapitalization,
-      keyboardType: keyboardType,
-      style: const TextStyle(fontSize: 13),
-      onChanged: (value) {
-        setState(() {});
-        onChanged?.call(value);
-      },
-      decoration: InputDecoration(
-        hintText: hint,
-        counterText: '',
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: 1.5,
-          ),
-        ),
       ),
     );
   }

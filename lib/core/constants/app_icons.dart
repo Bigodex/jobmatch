@@ -23,9 +23,11 @@ class AppIcons {
   static const String box = '${_base}box.svg';
   static const String briefcase = '${_base}briefcase.svg';
   static const String building = '${_base}building.svg';
+  static const String buildingfull = '${_base}building_full.svg';
   static const String burger = '${_base}burger.svg';
   static const String cake = '${_base}cake.svg';
   static const String calendar = '${_base}calendar.svg';
+  static const String calendarcheck = '${_base}calendar_check.svg';
   static const String cap = '${_base}cap.svg';
   static const String chat = '${_base}chat.svg';
   static const String code = '${_base}code.svg';
@@ -41,22 +43,28 @@ class AppIcons {
   static const String house = '${_base}house.svg';
   static const String incomplete = '${_base}incomplete.svg';
   static const String info = '${_base}info.svg';
+  static const String image = '${_base}image.svg';
   static const String id = '${_base}id.svg';
   static const String id2 = '${_base}id_2.svg';
   static const String language = '${_base}language.svg';
   static const String laptop = '${_base}laptop.svg';
+  static const String links = '${_base}links.svg';
   static const String lock = '${_base}lock.svg';
+  static const String nodes = '${_base}nodes.svg';
   static const String mail= '${_base}mail.svg';
   static const String mobile = '${_base}mobile.svg';
   static const String one = '${_base}one.svg';
   static const String paint = '${_base}paint.svg';
   static const String pencil = '${_base}pencil.svg';
   static const String puzzle = '${_base}puzzle.svg';
+  static const String resume = '${_base}resume.svg';
   static const String role = '${_base}role.svg';
   static const String shield = '${_base}shield.svg';
+  static const String state = '${_base}state.svg';
   static const String softskills = '${_base}soft_skills.svg';
   static const String softskillsitem = '${_base}soft_skills_item.svg';
   static const String user = '${_base}user.svg';
+  static const String trash = '${_base}trash.svg';
   static const String two = '${_base}two.svg';
 
   // ===================================================

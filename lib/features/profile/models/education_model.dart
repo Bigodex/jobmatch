@@ -1,6 +1,13 @@
 // =======================================================
 // EDUCATION MODEL
+// -------------------------------------------------------
+// Formação acadêmica
+// - parsing seguro
+// - toMap / fromMap
+// - copyWith com sentinela para campos anuláveis
 // =======================================================
+
+const Object _unset = Object();
 
 class EducationModel {
   final String institution;
@@ -25,12 +32,12 @@ class EducationModel {
       course: map['course'] ?? '',
       description: map['description'] ?? '',
       startDate: map['startDate'] != null
-          ? DateTime.tryParse(map['startDate']) ?? DateTime.now()
+          ? DateTime.tryParse(map['startDate'].toString()) ?? DateTime.now()
           : DateTime.now(),
       endDate: map['endDate'] != null
-          ? DateTime.tryParse(map['endDate'])
+          ? DateTime.tryParse(map['endDate'].toString())
           : null,
-      logoUrl: map['logoUrl'],
+      logoUrl: map['logoUrl']?.toString(),
     );
   }
 
@@ -50,16 +57,16 @@ class EducationModel {
     String? course,
     String? description,
     DateTime? startDate,
-    DateTime? endDate,
-    String? logoUrl,
+    Object? endDate = _unset,
+    Object? logoUrl = _unset,
   }) {
     return EducationModel(
       institution: institution ?? this.institution,
       course: course ?? this.course,
       description: description ?? this.description,
       startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      logoUrl: logoUrl ?? this.logoUrl,
+      endDate: identical(endDate, _unset) ? this.endDate : endDate as DateTime?,
+      logoUrl: identical(logoUrl, _unset) ? this.logoUrl : logoUrl as String?,
     );
   }
 }

@@ -6,6 +6,7 @@
 // - Bandeiras persistidas no model
 // - Sem atualizar provider no initState
 // - Validação Jobu para nível muito baixo
+// - Validação visual com borda transparente/sem volume
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -60,8 +61,8 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
   };
 
   late List<LanguageModel> _languages;
+  bool _showValidation = false;
 
-  bool get _isValid => _languages.isNotEmpty;
 
   @override
   void initState() {
@@ -88,28 +89,25 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
         );
   }
 
-  void _addLanguage() async {
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      builder: (_) {
-        final availableLanguages = _languagesMap.keys
-            .where((name) => !_languages.any((e) => e.name == name))
-            .toList();
+  bool _isLanguageLevelInvalid(LanguageModel lang) {
+    return lang.level == 0 || lang.level == 5;
+  }
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: availableLanguages.map((name) {
-            return ListTile(
-              leading: Text(
-                _languagesMap[name] ?? '🌍',
-                style: const TextStyle(fontSize: 20),
-              ),
-              title: Text(name),
-              onTap: () => Navigator.pop(context, name),
-            );
-          }).toList(),
-        );
-      },
+  bool _isLanguageLevelValid(LanguageModel lang) {
+    return !_isLanguageLevelInvalid(lang);
+  }
+
+  Future<void> _addLanguage() async {
+    final availableLanguages = _languagesMap.keys
+        .where((name) => !_languages.any((e) => e.name == name))
+        .toList();
+
+    if (availableLanguages.isEmpty) return;
+
+    final selected = await _showLanguageSelectionModal(
+      title: 'Selecionar idioma',
+      searchHint: 'Buscar idioma',
+      languages: availableLanguages,
     );
 
     if (selected != null) {
@@ -127,6 +125,228 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
 
       _sync();
     }
+  }
+
+  Future<String?> _showLanguageSelectionModal({
+    required String title,
+    required String searchHint,
+    required List<String> languages,
+  }) async {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final theme = Theme.of(dialogContext);
+        final colors = theme.extension<AppColorsExtension>()!;
+        final searchController = TextEditingController();
+        List<String> filtered = List.from(languages);
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void applyFilter(String value) {
+              final query = value.trim().toLowerCase();
+
+              setModalState(() {
+                if (query.isEmpty) {
+                  filtered = List.from(languages);
+                } else {
+                  filtered = languages.where((name) {
+                    return name.toLowerCase().contains(query);
+                  }).toList();
+                }
+              });
+            }
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 24,
+              ),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: 460,
+                  maxHeight: MediaQuery.of(dialogContext).size.height * 0.72,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.cardTertiary,
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.28),
+                      blurRadius: 28,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 18, 14, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => Navigator.of(dialogContext).pop(),
+                            borderRadius: BorderRadius.circular(999),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 20,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                      child: TextField(
+                        controller: searchController,
+                        onChanged: applyFilter,
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: searchHint,
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.04),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: const BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: theme.colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.06),
+                    ),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  'Nenhum idioma encontrado.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.70),
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Scrollbar(
+                              thumbVisibility: true,
+                              radius: const Radius.circular(999),
+                              child: ListView.separated(
+                                padding: const EdgeInsets.all(14),
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final name = filtered[index];
+                                  final flag = _languagesMap[name] ?? '🌍';
+
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.of(dialogContext).pop(name);
+                                    },
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 14,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.035),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: Colors.white.withOpacity(0.06),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            alignment: Alignment.center,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.05),
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                            ),
+                                            child: Text(
+                                              flag,
+                                              style:
+                                                  const TextStyle(fontSize: 20),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.chevron_right_rounded,
+                                            color:
+                                                Colors.white.withOpacity(0.35),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _removeLanguage(int index) {
@@ -154,14 +374,18 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
   }
 
   void _continue() {
+    setState(() {
+      _showValidation = true;
+    });
+
     final invalidLanguage = _languages.cast<LanguageModel?>().firstWhere(
-          (lang) => lang != null && (lang.level == 0 || lang.level == 5),
+          (lang) => lang != null && _isLanguageLevelInvalid(lang),
           orElse: () => null,
         );
 
     if (invalidLanguage != null) {
       widget.onJobuMessageChange(
-        'Nível de idioma "${invalidLanguage.name}" \nmuito baixo.',
+        'Nível de idioma "${invalidLanguage.name}" muito baixo.',
       );
       return;
     }
@@ -188,8 +412,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
     return SingleChildScrollView(
       child: Column(
@@ -250,7 +473,7 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isValid ? _continue : null,
+                        onPressed: _continue,
                         child: const Text('Continuar'),
                       ),
                     ),
@@ -266,53 +489,118 @@ class _StepLanguagesState extends ConsumerState<StepLanguages> {
 
   Widget _item(LanguageModel lang, int index) {
     final theme = Theme.of(context);
+    final isInvalid = _showValidation && _isLanguageLevelInvalid(lang);
+    final isValid = _showValidation && _isLanguageLevelValid(lang);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Text(
-                  _getFlag(lang),
-                  style: const TextStyle(fontSize: 20),
+    final borderColor = isInvalid
+        ? theme.colorScheme.error
+        : isValid
+            ? theme.colorScheme.primary
+            : Colors.transparent;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: borderColor,
+          width: isInvalid || isValid ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      _getFlag(lang),
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        lang.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(lang.name),
-              ],
-            ),
-            if (lang.name != 'Português')
-              IconButton(
-                onPressed: () => _removeLanguage(index),
-                icon: const Icon(Icons.delete, size: 18),
               ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Slider(
-          value: lang.level.toDouble(),
-          min: 0,
-          max: 100,
-          divisions: 20,
-          onChanged: (value) {
-            _updateLevel(index, value.toInt());
-          },
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _getLevelLabel(lang.level),
-              style: TextStyle(
-                color: theme.colorScheme.primary,
+              if (isInvalid)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    size: 20,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              if (isValid)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              if (lang.name != 'Português')
+                IconButton(
+                  onPressed: () => _removeLanguage(index),
+                  icon: const Icon(Icons.delete, size: 18),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: lang.level.toDouble(),
+            min: 0,
+            max: 100,
+            divisions: 20,
+            onChanged: (value) {
+              _updateLevel(index, value.toInt());
+            },
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _getLevelLabel(lang.level),
+                style: TextStyle(
+                  color: isInvalid
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                  fontWeight:
+                      isInvalid || isValid ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
-            ),
-            Text('${lang.level}%'),
-          ],
-        ),
-      ],
+              Text(
+                '${lang.level}%',
+                style: TextStyle(
+                  color: isInvalid
+                      ? theme.colorScheme.error
+                      : isValid
+                          ? theme.colorScheme.primary
+                          : null,
+                  fontWeight:
+                      isInvalid || isValid ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

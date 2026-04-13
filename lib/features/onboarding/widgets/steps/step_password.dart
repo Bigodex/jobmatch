@@ -2,6 +2,7 @@
 // STEP PASSWORD / ACCOUNT
 // =======================================================
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
+import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 
 class StepPassword extends ConsumerStatefulWidget {
   final VoidCallback onNext;
@@ -32,6 +34,12 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
+  bool _emailHasError = false;
+  bool _passwordHasError = false;
+  bool _confirmPasswordHasError = false;
+  bool _emailAlreadyInUse = false;
+  bool _isCheckingEmail = false;
 
   @override
   void initState() {
@@ -61,49 +69,120 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
     return value.trim().length >= 6;
   }
 
-  void _validateAndProceed() {
+  bool get _isEmailFormatValid {
+    final value = email.text.trim();
+    if (value.isEmpty) return false;
+    return _isValidEmail(value);
+  }
+
+  bool get _isEmailValid {
+    return _isEmailFormatValid && !_emailAlreadyInUse;
+  }
+
+  bool get _isPasswordValid {
+    final value = password.text.trim();
+    if (value.isEmpty) return false;
+    return _hasMinPasswordLength(value);
+  }
+
+  bool get _isConfirmPasswordValid {
+    final passwordValue = password.text.trim();
+    final confirmValue = confirmPassword.text.trim();
+
+    if (confirmValue.isEmpty) return false;
+    if (!_hasMinPasswordLength(passwordValue)) return false;
+
+    return passwordValue == confirmValue;
+  }
+
+  Future<bool> _checkIfEmailAlreadyExists(String emailValue) async {
+    try {
+      final methods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(
+        emailValue,
+      );
+
+      return methods.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _validateAndProceed() async {
     final emailValue = email.text.trim();
     final passwordValue = password.text.trim();
     final confirmValue = confirmPassword.text.trim();
 
+    setState(() {
+      _emailAlreadyInUse = false;
+      _emailHasError = emailValue.isEmpty || !_isValidEmail(emailValue);
+      _passwordHasError =
+          passwordValue.isEmpty || !_hasMinPasswordLength(passwordValue);
+      _confirmPasswordHasError = confirmValue.isEmpty ||
+          !_hasMinPasswordLength(passwordValue) ||
+          passwordValue != confirmValue;
+    });
+
     if (emailValue.isEmpty) {
       widget.onJobuMessageChange(
-        'Ei 👀 preencha seu e-mail \npara continuar.',
+        'Ei 👀 preencha seu e-mail para continuar.',
       );
       return;
     }
 
     if (!_isValidEmail(emailValue)) {
       widget.onJobuMessageChange(
-        'Hum… esse e-mail não \nparece válido.',
+        'Hum… esse e-mail não parece válido.',
+      );
+      return;
+    }
+
+    setState(() {
+      _isCheckingEmail = true;
+    });
+
+    final alreadyExists = await _checkIfEmailAlreadyExists(emailValue);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isCheckingEmail = false;
+      _emailAlreadyInUse = alreadyExists;
+      if (alreadyExists) {
+        _emailHasError = true;
+      }
+    });
+
+    if (alreadyExists) {
+      widget.onJobuMessageChange(
+        'Esse e-mail já está cadastrado. Use outro ou faça login.',
       );
       return;
     }
 
     if (passwordValue.isEmpty) {
       widget.onJobuMessageChange(
-        'Você precisa criar uma \nsenha para entrar.',
+        'Você precisa criar uma senha para entrar.',
       );
       return;
     }
 
     if (!_hasMinPasswordLength(passwordValue)) {
       widget.onJobuMessageChange(
-        'Sua senha precisa ter pelo \nmenos 6 caracteres.',
+        'Sua senha precisa ter pelo menos 6 caracteres.',
       );
       return;
     }
 
     if (confirmValue.isEmpty) {
       widget.onJobuMessageChange(
-        'Confirme sua senha para \neu ter certeza.',
+        'Confirme sua senha para eu ter certeza.',
       );
       return;
     }
 
     if (passwordValue != confirmValue) {
       widget.onJobuMessageChange(
-        'As senhas não coincidem. \nConfere e tenta de novo.',
+        'As senhas não coincidem. Confere e tenta de novo.',
       );
       return;
     }
@@ -127,7 +206,7 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(4, 12, 12, 12),
         child: SvgPicture.asset(
           obscure ? AppIcons.eyeclosed : AppIcons.eye,
           width: 18,
@@ -136,6 +215,22 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
             theme.colorScheme.onSurface.withOpacity(0.6),
             BlendMode.srcIn,
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmailTrailing() {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 12, 12),
+      child: SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: theme.colorScheme.primary,
         ),
       ),
     );
@@ -191,11 +286,22 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                     _editItem(
                       icon: AppIcons.mail,
                       title: 'Email',
-                      child: _inputField(
+                      child: AppValidatedInputField(
                         controller: email,
                         hint: 'Digite seu email',
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        hasError: _emailHasError || _emailAlreadyInUse,
+                        isValid: _isEmailValid,
+                        trailing: _isCheckingEmail ? _buildEmailTrailing() : null,
                         onChanged: (_) {
+                          setState(() {
+                            _emailAlreadyInUse = false;
+
+                            if (_emailHasError || _isEmailFormatValid) {
+                              _emailHasError = !_isEmailFormatValid;
+                            }
+                          });
                           widget.onJobuMessageChange(null);
                         },
                       ),
@@ -206,11 +312,14 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                     _editItem(
                       icon: AppIcons.lock,
                       title: 'Senha',
-                      child: _inputField(
+                      child: AppValidatedInputField(
                         controller: password,
                         hint: 'Crie uma senha',
                         obscureText: _obscurePassword,
-                        suffix: _buildPasswordSuffix(
+                        autofillHints: const [AutofillHints.newPassword],
+                        hasError: _passwordHasError,
+                        isValid: _isPasswordValid,
+                        trailing: _buildPasswordSuffix(
                           obscure: _obscurePassword,
                           onTap: () {
                             setState(() {
@@ -219,6 +328,19 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                           },
                         ),
                         onChanged: (_) {
+                          setState(() {
+                            if (_passwordHasError) {
+                              _passwordHasError = !_isPasswordValid;
+                            }
+
+                            if (_confirmPasswordHasError ||
+                                confirmPassword.text.isNotEmpty) {
+                              _confirmPasswordHasError =
+                                  !_isConfirmPasswordValid &&
+                                      confirmPassword.text.trim().isNotEmpty;
+                            }
+                          });
+
                           widget.onJobuMessageChange(null);
                         },
                       ),
@@ -229,11 +351,14 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                     _editItem(
                       icon: AppIcons.lock,
                       title: 'Confirmar senha',
-                      child: _inputField(
+                      child: AppValidatedInputField(
                         controller: confirmPassword,
                         hint: 'Digite sua senha novamente',
                         obscureText: _obscureConfirmPassword,
-                        suffix: _buildPasswordSuffix(
+                        autofillHints: const [AutofillHints.password],
+                        hasError: _confirmPasswordHasError,
+                        isValid: _isConfirmPasswordValid,
+                        trailing: _buildPasswordSuffix(
                           obscure: _obscureConfirmPassword,
                           onTap: () {
                             setState(() {
@@ -243,6 +368,12 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                           },
                         ),
                         onChanged: (_) {
+                          setState(() {
+                            if (_confirmPasswordHasError) {
+                              _confirmPasswordHasError =
+                                  !_isConfirmPasswordValid;
+                            }
+                          });
                           widget.onJobuMessageChange(null);
                         },
                       ),
@@ -253,7 +384,7 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _validateAndProceed,
+                        onPressed: _isCheckingEmail ? null : _validateAndProceed,
                         child: const Text('Continuar'),
                       ),
                     ),
@@ -263,49 +394,6 @@ class _StepPasswordState extends ConsumerState<StepPassword> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-    bool obscureText = false,
-    Widget? suffix,
-    ValueChanged<String>? onChanged,
-  }) {
-    final theme = Theme.of(context);
-
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      style: const TextStyle(fontSize: 13),
-      onChanged: (value) {
-        setState(() {});
-        onChanged?.call(value);
-      },
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        suffixIcon: suffix,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.white24),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(
-            color: theme.colorScheme.primary,
-            width: 1.5,
-          ),
-        ),
       ),
     );
   }

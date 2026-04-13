@@ -126,7 +126,7 @@ class WelcomeScreen extends StatelessWidget {
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: theme.colorScheme.primary.withOpacity(0.3),
+                          color: theme.colorScheme.primary.withOpacity(1.0),
                         ),
                         foregroundColor: theme.colorScheme.primary,
                         padding: const EdgeInsets.symmetric(vertical: 14),
