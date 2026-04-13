@@ -4,7 +4,6 @@
 
 // ignore_for_file: dead_code
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -166,7 +165,6 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     switch (stepKey) {
       case 'name':
       case 'birthDate':
-      case 'identification':
         targetStep = OnboardingStep.name;
         break;
 
@@ -221,10 +219,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   // ===================================================
   // CREATE ACCOUNT
   // ===================================================
-  Future<ChecklistCreateAccountResult> _createAccount() async {
-    if (_isCreatingAccount) {
-      return ChecklistCreateAccountResult.error;
-    }
+  Future<void> _createAccount() async {
+    if (_isCreatingAccount) return;
 
     final onboarding = ref.read(onboardingProvider);
 
@@ -242,7 +238,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
         _jobuMessage =
             'Ainda falta um ou mais campos obrigatórios para criar sua conta.';
       });
-      return ChecklistCreateAccountResult.error;
+      return;
     }
 
     setState(() {
@@ -287,9 +283,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       ref.invalidate(profileProvider);
       ref.read(onboardingProvider.notifier).reset();
 
-      if (!mounted) {
-        return ChecklistCreateAccountResult.success;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isCreatingAccount = false;
@@ -298,40 +292,13 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       });
 
       context.go('/home');
-      return ChecklistCreateAccountResult.success;
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) {
-        return e.code == 'email-already-in-use'
-            ? ChecklistCreateAccountResult.emailAlreadyInUse
-            : ChecklistCreateAccountResult.error;
-      }
-
-      if (e.code == 'email-already-in-use') {
-        setState(() {
-          _isCreatingAccount = false;
-          _jobuMessage = null;
-        });
-
-        return ChecklistCreateAccountResult.emailAlreadyInUse;
-      }
-
-      setState(() {
-        _isCreatingAccount = false;
-        _jobuMessage = 'Não consegui criar sua conta. ${e.message ?? e.code}';
-      });
-
-      return ChecklistCreateAccountResult.error;
     } catch (e) {
-      if (!mounted) {
-        return ChecklistCreateAccountResult.error;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isCreatingAccount = false;
         _jobuMessage = 'Não consegui criar sua conta. ${e.toString()}';
       });
-
-      return ChecklistCreateAccountResult.error;
     }
   }
 
@@ -353,9 +320,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: OnboardingLayout(
-                  key: ValueKey(
-                    '${_currentStep.name}-${_isEditingFromChecklist ? 'edit' : 'flow'}',
-                  ),
+                  key: ValueKey('${_currentStep.name}-${_isEditingFromChecklist ? 'edit' : 'flow'}'),
                   currentStep: _currentStep.index,
                   totalSteps: OnboardingStep.values.length,
                   onBack: _isCreatingAccount ? null : _prevStep,
@@ -412,3 +377,85 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             setState(() {
               _jobuMessage = msg;
             });
+          },
+        );
+
+      case OnboardingStep.profileIntro:
+        return StepProfileIntro(
+          onNext: _handleStepComplete,
+        );
+
+      case OnboardingStep.resume:
+        return StepResume(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.softSkills:
+        return StepSoftSkills(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.hardSkills:
+        return StepHardSkills(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.experience:
+        return StepExperience(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.education:
+        return StepEducation(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.links:
+        return StepLinks(
+          onNext: _handleStepComplete,
+          onSkip: _handleStepSkip,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
+        );
+
+      case OnboardingStep.checklist:
+        return StepChecklist(
+          onCreateAccount: _createAccount,
+          onEditStep: _goToChecklistStep,
+        );
+    }
+  }
+}
