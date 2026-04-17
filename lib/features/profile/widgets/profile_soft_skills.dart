@@ -20,16 +20,46 @@ import 'package:jobmatch/features/profile/models/soft_skill_model.dart';
 
 class ProfileSoftSkills extends StatelessWidget {
   final List<SoftSkillModel> skills;
+  final bool isPublic;
 
   const ProfileSoftSkills({
     super.key,
     required this.skills,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required List<SoftSkillModel> skills,
+  }) {
+    return skills.any(
+      (skill) =>
+          _hasText(skill.title) ||
+          _hasText(skill.description),
+    );
+  }
+
+  static bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
+
+    final visibleSkills = isPublic
+        ? skills
+            .where(
+              (skill) =>
+                  _hasText(skill.title) ||
+                  _hasText(skill.description),
+            )
+            .toList()
+        : skills;
+
+    if (isPublic && visibleSkills.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -66,12 +96,13 @@ class ProfileSoftSkills extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    context.push('/edit-soft-skills', extra: skills);
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      context.push('/edit-soft-skills', extra: skills);
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
@@ -81,13 +112,13 @@ class ProfileSoftSkills extends StatelessWidget {
             // ===================================================
             // LISTA DINÂMICA / PLACEHOLDER
             // ===================================================
-            if (skills.isEmpty)
+            if (!isPublic && skills.isEmpty)
               _PendingSoftSkillItem(
                 fieldName: 'Habilidades Comportamentais',
               )
             else
               Column(
-                children: skills.asMap().entries.map((entry) {
+                children: visibleSkills.asMap().entries.map((entry) {
                   final index = entry.key;
                   final skill = entry.value;
 
@@ -96,8 +127,9 @@ class ProfileSoftSkills extends StatelessWidget {
                       _SkillItem(
                         title: skill.title,
                         description: skill.description,
+                        isPublic: isPublic,
                       ),
-                      if (index != skills.length - 1)
+                      if (index != visibleSkills.length - 1)
                         Divider(
                           height: 24,
                           color: theme.dividerColor.withOpacity(0.2),
@@ -120,10 +152,12 @@ class ProfileSoftSkills extends StatelessWidget {
 class _SkillItem extends StatelessWidget {
   final String title;
   final String description;
+  final bool isPublic;
 
   const _SkillItem({
     required this.title,
     required this.description,
+    required this.isPublic,
   });
 
   @override
@@ -141,45 +175,65 @@ class _SkillItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.softskillsitem,
           isPending: isPending,
+          showBadge: !isPublic,
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasTitle)
-                const SizedBox.shrink()
-              else
-                const SizedBox.shrink(),
-              if (hasTitle)
-                Text(
-                  safeTitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              if (isPublic) ...[
+                if (hasTitle)
+                  Text(
+                    safeTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'nome da habilidade',
-                ),
-              const SizedBox(height: 6),
-              if (hasDescription)
-                Text(
-                  safeDescription,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    color: Colors.white.withOpacity(0.62),
+                if (hasTitle && hasDescription)
+                  const SizedBox(height: 6),
+                if (hasDescription)
+                  Text(
+                    safeDescription,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
                   ),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'descrição',
-                ),
+              ] else ...[
+                if (hasTitle)
+                  Text(
+                    safeTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'nome da habilidade',
+                  ),
+                const SizedBox(height: 6),
+                if (hasDescription)
+                  Text(
+                    safeDescription,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'descrição',
+                  ),
+              ],
             ],
           ),
         ),
@@ -207,6 +261,7 @@ class _PendingSoftSkillItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.softskillsitem,
           isPending: true,
+          showBadge: true,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -264,10 +319,12 @@ Widget _pendingText({
 class _StatusIcon extends StatelessWidget {
   final String icon;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusIcon({
     required this.icon,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -275,6 +332,18 @@ class _StatusIcon extends StatelessWidget {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final theme = Theme.of(context);
     final pendingColor = Colors.amber.shade300;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 18,
+        height: 18,
+        child: SvgPicture.asset(
+          icon,
+          width: 16,
+          height: 16,
+        ),
+      );
+    }
 
     return SizedBox(
       width: 18,

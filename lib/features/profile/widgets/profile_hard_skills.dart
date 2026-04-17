@@ -18,16 +18,43 @@ import 'package:jobmatch/features/profile/models/tech_skill_model.dart';
 
 class ProfileHardSkills extends StatelessWidget {
   final List<TechSkillModel> skills;
+  final bool isPublic;
 
   const ProfileHardSkills({
     super.key,
     required this.skills,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required List<TechSkillModel> skills,
+  }) {
+    return skills.any(_skillHasAnyContent);
+  }
+
+  static bool _skillHasAnyContent(TechSkillModel skill) {
+    final hasTitle = skill.title.trim().isNotEmpty;
+    final hasLevel = skill.level > 0;
+    final hasTags = skill.tools
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .isNotEmpty;
+
+    return hasTitle || hasLevel || hasTags;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
+
+    final visibleSkills = isPublic
+        ? skills.where(_skillHasAnyContent).toList()
+        : skills;
+
+    if (isPublic && visibleSkills.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -64,15 +91,16 @@ class ProfileHardSkills extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    context.push(
-                      '/edit-hard-skills',
-                      extra: skills,
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      context.push(
+                        '/edit-hard-skills',
+                        extra: skills,
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
@@ -82,13 +110,13 @@ class ProfileHardSkills extends StatelessWidget {
             // ===================================================
             // LISTA DINÂMICA / PLACEHOLDER
             // ===================================================
-            if (skills.isEmpty)
+            if (!isPublic && skills.isEmpty)
               _PendingHardSkillItem(
                 fieldName: 'Habilidades Técnicas',
               )
             else
               Column(
-                children: skills.asMap().entries.map((entry) {
+                children: visibleSkills.asMap().entries.map((entry) {
                   final index = entry.key;
                   final skill = entry.value;
 
@@ -100,8 +128,9 @@ class ProfileHardSkills extends StatelessWidget {
                         levelLabel: _levelLabel(skill.level),
                         progress: skill.level / 100,
                         tags: skill.tools,
+                        isPublic: isPublic,
                       ),
-                      if (index != skills.length - 1)
+                      if (index != visibleSkills.length - 1)
                         const SizedBox(height: 16),
                     ],
                   );
@@ -134,6 +163,7 @@ class _HardSkillItem extends StatelessWidget {
   final String levelLabel;
   final double progress;
   final List<String> tags;
+  final bool isPublic;
 
   const _HardSkillItem({
     required this.title,
@@ -141,11 +171,12 @@ class _HardSkillItem extends StatelessWidget {
     required this.levelLabel,
     required this.progress,
     required this.tags,
+    required this.isPublic,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
 
     final safeTitle = title.trim();
     final cleanTags = tags.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
@@ -161,76 +192,217 @@ class _HardSkillItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.code,
           isPending: isPending,
+          showBadge: !isPublic,
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (hasTitle)
-                Text(
-                  safeTitle,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
+          child: isPublic
+              ? _PublicHardSkillContent(
+                  hasTitle: hasTitle,
+                  safeTitle: safeTitle,
+                  hasLevel: hasLevel,
+                  levelLabel: levelLabel,
+                  progress: progress,
+                  hasTags: hasTags,
+                  cleanTags: cleanTags,
                 )
-              else
-                _pendingText(
+              : _PrivateHardSkillContent(
                   context: context,
-                  fieldName: 'nome da habilidade',
+                  hasTitle: hasTitle,
+                  safeTitle: safeTitle,
+                  hasLevel: hasLevel,
+                  levelLabel: levelLabel,
+                  progress: progress,
+                  hasTags: hasTags,
+                  cleanTags: cleanTags,
                 ),
+        ),
+      ],
+    );
+  }
+}
 
-              const SizedBox(height: 4),
+class _PublicHardSkillContent extends StatelessWidget {
+  final bool hasTitle;
+  final String safeTitle;
+  final bool hasLevel;
+  final String levelLabel;
+  final double progress;
+  final bool hasTags;
+  final List<String> cleanTags;
 
-              if (hasLevel)
-                Text(
-                  levelLabel,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.62),
-                  ),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'nível',
-                ),
+  const _PublicHardSkillContent({
+    required this.hasTitle,
+    required this.safeTitle,
+    required this.hasLevel,
+    required this.levelLabel,
+    required this.progress,
+    required this.hasTags,
+    required this.cleanTags,
+  });
 
-              const SizedBox(height: 8),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final children = <Widget>[];
 
-              if (hasLevel)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    minHeight: 4,
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    valueColor: AlwaysStoppedAnimation(
-                      theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
-
-              SizedBox(height: hasLevel ? 12 : 10),
-
-              if (hasTags)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: cleanTags
-                      .map((tag) => _TagChip(label: tag))
-                      .toList(),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'tecnologias',
-                ),
-            ],
+    if (hasTitle) {
+      children.add(
+        Text(
+          safeTitle,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
+      );
+    }
+
+    if (hasLevel) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
+      }
+
+      children.add(
+        Text(
+          levelLabel,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.62),
+          ),
+        ),
+      );
+
+      children.add(const SizedBox(height: 8));
+
+      children.add(
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            minHeight: 4,
+            backgroundColor: Colors.white.withOpacity(0.1),
+            valueColor: AlwaysStoppedAnimation(
+              theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (hasTags) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 12));
+      }
+
+      children.add(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: cleanTags
+              .map((tag) => _TagChip(label: tag))
+              .toList(),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+}
+
+class _PrivateHardSkillContent extends StatelessWidget {
+  final BuildContext context;
+  final bool hasTitle;
+  final String safeTitle;
+  final bool hasLevel;
+  final String levelLabel;
+  final double progress;
+  final bool hasTags;
+  final List<String> cleanTags;
+
+  const _PrivateHardSkillContent({
+    required this.context,
+    required this.hasTitle,
+    required this.safeTitle,
+    required this.hasLevel,
+    required this.levelLabel,
+    required this.progress,
+    required this.hasTags,
+    required this.cleanTags,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasTitle)
+          Text(
+            safeTitle,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          )
+        else
+          _pendingText(
+            context: this.context,
+            fieldName: 'nome da habilidade',
+          ),
+
+        const SizedBox(height: 4),
+
+        if (hasLevel)
+          Text(
+            levelLabel,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.62),
+            ),
+          )
+        else
+          _pendingText(
+            context: this.context,
+            fieldName: 'nível',
+          ),
+
+        const SizedBox(height: 8),
+
+        if (hasLevel)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              minHeight: 4,
+              backgroundColor: Colors.white.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation(
+                theme.colorScheme.primary,
+              ),
+            ),
+          ),
+
+        SizedBox(height: hasLevel ? 12 : 10),
+
+        if (hasTags)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: cleanTags
+                .map((tag) => _TagChip(label: tag))
+                .toList(),
+          )
+        else
+          _pendingText(
+            context: this.context,
+            fieldName: 'tecnologias',
+          ),
       ],
     );
   }
@@ -255,6 +427,7 @@ class _PendingHardSkillItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.code,
           isPending: true,
+          showBadge: true,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -345,10 +518,12 @@ Widget _pendingText({
 class _StatusIcon extends StatelessWidget {
   final String icon;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusIcon({
     required this.icon,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -356,6 +531,18 @@ class _StatusIcon extends StatelessWidget {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final theme = Theme.of(context);
     final pendingColor = Colors.amber.shade300;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 18,
+        height: 18,
+        child: SvgPicture.asset(
+          icon,
+          width: 16,
+          height: 16,
+        ),
+      );
+    }
 
     return SizedBox(
       width: 18,

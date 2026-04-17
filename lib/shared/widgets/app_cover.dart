@@ -2,17 +2,20 @@
 // APP COVER
 // -------------------------------------------------------
 // Capa com suporte a:
-// - imagem (profile)
-// - gradient (default/home)
+// - imagem remota
+// - banner padrão em SVG
 // - modo edição
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppCover extends StatelessWidget {
   final String? imageUrl;
   final bool isEditable;
   final VoidCallback? onEdit;
+
+  static const String _defaultBannerAsset = 'assets/images/banner.svg';
 
   const AppCover({
     super.key,
@@ -21,37 +24,29 @@ class AppCover extends StatelessWidget {
     this.onEdit,
   });
 
+  bool get _hasImage =>
+      imageUrl != null && imageUrl!.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: isEditable ? onEdit : null,
-
       child: Stack(
         children: [
-          Container(
-            height: 140,
-            width: double.infinity,
-
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-
-              // ===================================================
-              // IMAGEM OU GRADIENT
-              // ===================================================
-              image: imageUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(imageUrl!),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: _hasImage
+                  ? Image.network(
+                      imageUrl!,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return _buildDefaultBanner();
+                      },
                     )
-                  : null,
-
-              gradient: imageUrl == null
-                  ? const LinearGradient(
-                      colors: [Color(0xFF68E3FF), Color(0xFF3A8DFF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+                  : _buildDefaultBanner(),
             ),
           ),
 
@@ -76,6 +71,15 @@ class AppCover extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDefaultBanner() {
+    return SvgPicture.asset(
+      _defaultBannerAsset,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 140,
     );
   }
 }

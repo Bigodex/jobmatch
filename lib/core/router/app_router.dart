@@ -5,6 +5,9 @@
 import 'package:go_router/go_router.dart';
 import 'package:jobmatch/features/menu/screens/menu_screen.dart';
 
+import '../../features/profile/screens/public_profile_screen.dart';
+import '../../features/network/screens/network_connections_screen.dart';
+
 // =======================================================
 // MODELS
 // =======================================================
@@ -27,7 +30,6 @@ import '../../features/intro/screens/welcome_screen.dart';
 
 // AUTH
 import '../../features/auth/screens/login_screen.dart';
-import '../../features/auth/screens/register_screen.dart';
 
 // ONBOARDING
 import '../../features/onboarding/screens/onboarding_flow_screen.dart';
@@ -35,6 +37,7 @@ import '../../features/onboarding/screens/onboarding_flow_screen.dart';
 // Home / Chat / Profile / Menu
 import '../../features/home/screens/home_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
+import '../../features/chat/widgets/chat_open.dart';
 import '../../features/profile/screens/profile_screen.dart';
 
 // TELAS FULLSCREEN
@@ -66,7 +69,6 @@ final GoRouter appRouter = GoRouter(
     // ==================================================
     // INTRO
     // ==================================================
-
     GoRoute(
       path: '/intro',
       name: 'intro',
@@ -82,23 +84,15 @@ final GoRouter appRouter = GoRouter(
     // ==================================================
     // AUTH
     // ==================================================
-
     GoRoute(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
     ),
 
-    GoRoute(
-      path: '/register',
-      name: 'register',
-      builder: (context, state) => const RegisterScreen(),
-    ),
-
     // ==================================================
     // ONBOARDING
     // ==================================================
-
     GoRoute(
       path: '/onboarding',
       name: 'onboarding',
@@ -108,7 +102,6 @@ final GoRouter appRouter = GoRouter(
     // ==================================================
     // MENU / FULLSCREEN
     // ==================================================
-
     GoRoute(
       path: '/menu',
       name: 'menu',
@@ -116,9 +109,54 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ==================================================
+    // NETWORK
+    // --------------------------------------------------
+    // HOME -> abre em EXPLORAR
+    // PROFILE -> abre em CONEXÕES
+    // ==================================================
+    GoRoute(
+      path: '/network',
+      name: 'network',
+      builder: (context, state) => const NetworkConnectionsScreen(
+        initialTabIndex: 0,
+      ),
+    ),
+
+    GoRoute(
+      path: '/network/connections',
+      name: 'network-connections',
+      builder: (context, state) => const NetworkConnectionsScreen(
+        initialTabIndex: 1,
+      ),
+    ),
+
+    GoRoute(
+      path: '/network/user/:userId/connections',
+      name: 'network-user-connections',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return NetworkConnectionsScreen(
+          userId: userId,
+          initialTabIndex: 1,
+        );
+      },
+    ),
+
+    // ==================================================
+    // PERFIL PÚBLICO
+    // ==================================================
+    GoRoute(
+      path: '/network/user/:userId',
+      name: 'network-user-profile',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        return PublicProfileScreen(userId: userId);
+      },
+    ),
+
+    // ==================================================
     // TELAS FULLSCREEN (SEM BOTTOM NAV)
     // ==================================================
-
     GoRoute(
       path: '/edit-resume',
       name: 'edit-resume',
@@ -182,10 +220,18 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
+    GoRoute(
+      path: '/chat/conversation/:otherUserId',
+      name: 'chat-conversation',
+      builder: (context, state) {
+        final otherUserId = state.pathParameters['otherUserId']!;
+        return ChatOpen(otherUserId: otherUserId);
+      },
+    ),
+
     // ==================================================
     // SHELL (BOTTOM NAV)
     // ==================================================
-
     ShellRoute(
       builder: (context, state, child) {
         return AppBottomNav(child: child);

@@ -93,7 +93,7 @@ class AppHeader extends StatelessWidget {
           GestureDetector(
             onTap: onActionTap,
             child: SvgPicture.asset(
-              AppIcons.bell,
+              AppIcons.bellfull,
               width: 22,
               height: 22,
               colorFilter: ColorFilter.mode(

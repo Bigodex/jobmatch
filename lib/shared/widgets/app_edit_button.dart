@@ -8,14 +8,14 @@ import 'package:jobmatch/core/constants/app_theme.dart';
 class AppEditButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String label;
-  final IconData icon;
+  final Widget icon;
   final Color? color;
 
   const AppEditButton({
     super.key,
     required this.onPressed,
     this.label = 'Editar',
-    this.icon = Icons.edit,
+    this.icon = const Icon(Icons.edit, size: 18),
     this.color,
   });
 
@@ -25,11 +25,7 @@ class AppEditButton extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
 
     final background = color ?? colors.cardTertiary;
-
-    // 🔥 REGRA: se for primary → texto preto
-    final isPrimary =
-        background == theme.colorScheme.primary;
-
+    final isPrimary = background == theme.colorScheme.primary;
     final foreground = isPrimary ? Colors.black : Colors.white;
 
     return SizedBox(
@@ -37,12 +33,10 @@ class AppEditButton extends StatelessWidget {
       height: 48,
       child: ElevatedButton.icon(
         onPressed: onPressed,
-
-        icon: Icon(
-          icon,
-          size: 18,
+        icon: IconTheme(
+          data: IconThemeData(color: foreground, size: 18),
+          child: icon,
         ),
-
         label: Text(
           label,
           style: const TextStyle(
@@ -50,10 +44,9 @@ class AppEditButton extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-
         style: ElevatedButton.styleFrom(
           backgroundColor: background,
-          foregroundColor: foreground, // 🔥 DINÂMICO
+          foregroundColor: foreground,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

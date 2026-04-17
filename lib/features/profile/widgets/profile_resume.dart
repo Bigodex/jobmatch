@@ -13,12 +13,31 @@ import 'package:jobmatch/features/profile/screens/edit_resume_screen.dart';
 class ProfileResume extends StatelessWidget {
   final ResumeModel? resume;
   final String? email;
+  final bool isPublic;
 
   const ProfileResume({
     super.key,
     required this.resume,
     this.email,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required ResumeModel? resume,
+    String? email,
+  }) {
+    if (resume == null) return false;
+
+    return _hasText(email) ||
+        resume.birthDate != null ||
+        _hasText(resume.state) ||
+        _hasText(resume.city) ||
+        _hasText(resume.description);
+  }
+
+  static bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +51,72 @@ class ProfileResume extends StatelessWidget {
     final stateValue = _safe(resume!.state);
     final cityValue = _safe(resume!.city);
     final descriptionValue = _safe(resume!.description);
+
+    final items = <Widget>[];
+
+    if (!isPublic || emailValue != null) {
+      items.add(
+        _info(
+          context: context,
+          icon: AppIcons.mail,
+          title: 'Email',
+          value: emailValue,
+          placeholderHighlight: 'Email',
+        ),
+      );
+    }
+
+    if (!isPublic || birthValue != null) {
+      items.add(
+        _info(
+          context: context,
+          icon: AppIcons.cake,
+          title: resume!.labels.birthDateLabel,
+          value: birthValue,
+          placeholderHighlight: resume!.labels.birthDateLabel,
+        ),
+      );
+    }
+
+    if (!isPublic || stateValue != null) {
+      items.add(
+        _info(
+          context: context,
+          icon: AppIcons.state,
+          title: resume!.labels.stateLabel,
+          value: stateValue,
+          placeholderHighlight: 'Estado',
+        ),
+      );
+    }
+
+    if (!isPublic || cityValue != null) {
+      items.add(
+        _info(
+          context: context,
+          icon: AppIcons.buildingfull,
+          title: resume!.labels.cityLabel,
+          value: cityValue,
+          placeholderHighlight: 'Cidade',
+        ),
+      );
+    }
+
+    if (!isPublic || descriptionValue != null) {
+      items.add(
+        _infoWithLine(
+          context: context,
+          icon: AppIcons.infofull,
+          title: resume!.labels.descriptionLabel,
+          value: descriptionValue,
+          placeholderHighlight: 'Descrição',
+        ),
+      );
+    }
+
+    if (isPublic && items.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -62,70 +147,28 @@ class ProfileResume extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditResumeScreen(resume: resume!),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => EditResumeScreen(resume: resume!),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
             Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
-            _info(
-              context: context,
-              icon: AppIcons.mail,
-              title: 'Email',
-              value: emailValue,
-              placeholderHighlight: 'Email',
-            ),
-
-            const SizedBox(height: 12),
-
-            _info(
-              context: context,
-              icon: AppIcons.cake,
-              title: resume!.labels.birthDateLabel,
-              value: birthValue,
-              placeholderHighlight: resume!.labels.birthDateLabel,
-            ),
-
-            const SizedBox(height: 12),
-
-            _info(
-              context: context,
-              icon: AppIcons.state,
-              title: resume!.labels.stateLabel,
-              value: stateValue,
-              placeholderHighlight: 'Estado',
-            ),
-
-            const SizedBox(height: 12),
-
-            _info(
-              context: context,
-              icon: AppIcons.buildingfull,
-              title: resume!.labels.cityLabel,
-              value: cityValue,
-              placeholderHighlight: 'Cidade',
-            ),
-
-            const SizedBox(height: 12),
-
-            _infoWithLine(
-              context: context,
-              icon: AppIcons.infofull,
-              title: resume!.labels.descriptionLabel,
-              value: descriptionValue,
-              placeholderHighlight: 'Descrição',
-            ),
+            for (int i = 0; i < items.length; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              items[i],
+            ],
           ],
         ),
       ),
@@ -150,6 +193,7 @@ class ProfileResume extends StatelessWidget {
         _StatusIcon(
           icon: icon,
           isPending: isPending,
+          showBadge: !isPublic,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -203,6 +247,7 @@ class ProfileResume extends StatelessWidget {
                 _StatusIcon(
                   icon: icon,
                   isPending: isPending,
+                  showBadge: !isPublic,
                 ),
                 Expanded(
                   child: Container(
@@ -309,14 +354,17 @@ class ProfileResume extends StatelessWidget {
 // -------------------------------------------------------
 // - Pendente -> badge amarela com exclamação preta
 // - Preenchido -> badge azul com check preto
+// - Público -> sem badge
 // =======================================================
 class _StatusIcon extends StatelessWidget {
   final String icon;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusIcon({
     required this.icon,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -325,6 +373,18 @@ class _StatusIcon extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
     final pendingColor = Colors.amber.shade300;
     final successColor = theme.colorScheme.primary;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 18,
+        height: 18,
+        child: SvgPicture.asset(
+          icon,
+          width: 16,
+          height: 16,
+        ),
+      );
+    }
 
     return SizedBox(
       width: 18,

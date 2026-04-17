@@ -12,8 +12,19 @@ import 'package:jobmatch/features/profile/screens/edit_language_screen.dart';
 
 class ProfileLanguages extends StatelessWidget {
   final List<LanguageModel> languages;
+  final bool isPublic;
 
-  const ProfileLanguages({super.key, required this.languages});
+  const ProfileLanguages({
+    super.key,
+    required this.languages,
+    this.isPublic = false,
+  });
+
+  static bool hasPublicContent({
+    required List<LanguageModel> languages,
+  }) {
+    return languages.isNotEmpty;
+  }
 
   // ===================================================
   // LABEL (MESMA REGRA DO EDIT)
@@ -32,6 +43,10 @@ class ProfileLanguages extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
+
+    if (isPublic && languages.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -63,18 +78,19 @@ class ProfileLanguages extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            EditLanguageScreen(languages: languages),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              EditLanguageScreen(languages: languages),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
@@ -95,6 +111,7 @@ class ProfileLanguages extends StatelessWidget {
                       name: lang.name,
                       percent: lang.level,
                       levelLabel: _getLevelLabel(lang.level),
+                      showBadge: !isPublic,
                     ),
                     if (index != languages.length - 1)
                       Divider(
@@ -121,12 +138,14 @@ class _LanguageItem extends StatelessWidget {
   final String name;
   final int percent;
   final String levelLabel;
+  final bool showBadge;
 
   const _LanguageItem({
     required this.flag,
     required this.name,
     required this.percent,
     required this.levelLabel,
+    required this.showBadge,
   });
 
   @override
@@ -152,27 +171,28 @@ class _LanguageItem extends StatelessWidget {
                   style: const TextStyle(fontSize: 22),
                 ),
               ),
-              Positioned(
-                right: -2,
-                bottom: -1,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.scaffoldBackgroundColor,
-                      width: 1.5,
+              if (showBadge)
+                Positioned(
+                  right: -2,
+                  bottom: -1,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.scaffoldBackgroundColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 9,
+                      color: Colors.black,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    size: 9,
-                    color: Colors.black,
-                  ),
                 ),
-              ),
             ],
           ),
         ),

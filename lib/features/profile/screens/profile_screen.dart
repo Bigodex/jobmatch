@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
 
@@ -17,6 +18,7 @@ import 'package:jobmatch/features/profile/widgets/profile_hard_skills.dart';
 import 'package:jobmatch/features/profile/widgets/profile_languages.dart';
 import 'package:jobmatch/features/profile/widgets/profile_links.dart';
 import 'package:jobmatch/features/profile/widgets/profile_soft_skills.dart';
+import 'package:jobmatch/features/profile/widgets/profile_screen_skeleton.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
 
 import '../../../shared/widgets/app_header.dart';
@@ -33,6 +35,11 @@ class ProfileScreen extends ConsumerWidget {
 
     final profileAsync = ref.watch(profileProvider);
 
+    // ===================================================
+    // TROQUE PARA false QUANDO TERMINAR DE VALIDAR O VISUAL
+    // ===================================================
+    const bool previewSkeleton = false;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -47,105 +54,116 @@ class ProfileScreen extends ConsumerWidget {
             // CONTEÚDO
             // ===================================================
             Expanded(
-              child: profileAsync.when(
-                data: (profile) {
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        // ---------------------------------------------
-                        // HEADER DO PERFIL
-                        // ---------------------------------------------
-                        ProfileHeader(user: profile.user),
+              child: previewSkeleton
+                  ? const ProfileScreenSkeleton()
+                  : profileAsync.when(
+                      data: (profile) {
+                        return SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // ---------------------------------------------
+                              // HEADER DO PERFIL
+                              // ---------------------------------------------
+                              ProfileHeader(
+                                user: profile.user,
+                                onConnectionsTap: () {
+                                  context.push('/network/connections');
+                                },
+                              ),
 
-                        const SizedBox(height: 16),
+                              const SizedBox(height: 16),
 
-                        // ---------------------------------------------
-                        // RESUMO PROFISSIONAL
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileResume(
-                            resume: profile.resume,
-                            email: profile.user.email,
+                              // ---------------------------------------------
+                              // RESUMO PROFISSIONAL
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileResume(
+                                  resume: profile.resume,
+                                  email: profile.user.email,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // IDIOMAS
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileLanguages(
+                                  languages: profile.languages,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // SOFT SKILLS
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileSoftSkills(
+                                  skills: profile.softSkills,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // HARD SKILLS
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileHardSkills(
+                                  skills: profile.techSkills,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // EXPERIÊNCIA
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileExperience(
+                                  experiences: profile.experiences,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // FORMAÇÃO
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileEducation(
+                                  educations: profile.education,
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ---------------------------------------------
+                              // LINKS
+                              // ---------------------------------------------
+                              AppSectionCard(
+                                child: ProfileLinks(links: profile.links),
+                              ),
+
+                              const SizedBox(height: 32),
+                            ],
                           ),
-                        ),
+                        );
+                      },
 
-                        const SizedBox(height: 16),
+                      // ===================================================
+                      // LOADING
+                      // ===================================================
+                      loading: () => const ProfileScreenSkeleton(),
 
-                        // ---------------------------------------------
-                        // IDIOMAS
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileLanguages(languages: profile.languages),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ---------------------------------------------
-                        // SOFT SKILLS
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileSoftSkills(skills: profile.softSkills),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ---------------------------------------------
-                        // HARD SKILLS
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileHardSkills(skills: profile.techSkills),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ---------------------------------------------
-                        // EXPERIÊNCIA
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileExperience(
-                            experiences: profile.experiences,
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ---------------------------------------------
-                        // FORMAÇÃO
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileEducation(
-                            educations: profile.education,
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // ---------------------------------------------
-                        // LINKS
-                        // ---------------------------------------------
-                        AppSectionCard(
-                          child: ProfileLinks(links: profile.links),
-                        ),
-
-                        const SizedBox(height: 32),
-                      ],
+                      // ===================================================
+                      // ERROR
+                      // ===================================================
+                      error: (e, _) =>
+                          Center(child: Text('Erro ao carregar perfil: $e')),
                     ),
-                  );
-                },
-
-                // ===================================================
-                // LOADING
-                // ===================================================
-                loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-
-                // ===================================================
-                // ERROR
-                // ===================================================
-                error: (e, _) =>
-                    Center(child: Text('Erro ao carregar perfil: $e')),
-              ),
             ),
           ],
         ),

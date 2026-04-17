@@ -23,16 +23,47 @@ import 'package:jobmatch/features/profile/models/education_model.dart';
 
 class ProfileEducation extends StatelessWidget {
   final List<EducationModel> educations;
+  final bool isPublic;
 
   const ProfileEducation({
     super.key,
     required this.educations,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required List<EducationModel> educations,
+  }) {
+    return educations.any(_hasVisibleContent);
+  }
+
+  static bool _hasVisibleContent(EducationModel education) {
+    final institution = _safe(education.institution);
+    final period = _formatPeriod(
+      education.startDate,
+      education.endDate,
+    );
+    final course = _safe(education.course);
+    final description = _safe(education.description);
+
+    return institution != null ||
+        period != null ||
+        course != null ||
+        description != null;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
+
+    final visibleEducations = isPublic
+        ? educations.where(_hasVisibleContent).toList()
+        : educations;
+
+    if (isPublic && visibleEducations.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -67,34 +98,35 @@ class ProfileEducation extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    context.push(
-                      '/edit-education',
-                      extra: educations,
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      context.push(
+                        '/edit-education',
+                        extra: educations,
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
             Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
 
-            if (educations.isEmpty)
+            if (!isPublic && educations.isEmpty)
               const _PendingEducationItem(
                 fieldName: 'Formação',
               )
             else
               Column(
-                children: educations.asMap().entries.map((entry) {
+                children: visibleEducations.asMap().entries.map((entry) {
                   final index = entry.key;
                   final education = entry.value;
 
                   return Padding(
                     padding: EdgeInsets.only(
-                      bottom: index == educations.length - 1 ? 0 : 24,
+                      bottom: index == visibleEducations.length - 1 ? 0 : 24,
                     ),
                     child: _EducationItem(
                       institution: _safe(education.institution),
@@ -107,6 +139,7 @@ class ProfileEducation extends StatelessWidget {
                       logoUrl: _safe(education.logoUrl),
                       logoColor: _getLogoColor(education.institution),
                       logoText: _getLogoText(education.institution),
+                      isPublic: isPublic,
                     ),
                   );
                 }).toList(),
@@ -178,6 +211,7 @@ class _EducationItem extends StatelessWidget {
   final String? logoUrl;
   final Color logoColor;
   final String logoText;
+  final bool isPublic;
 
   const _EducationItem({
     required this.institution,
@@ -187,6 +221,7 @@ class _EducationItem extends StatelessWidget {
     required this.logoUrl,
     required this.logoColor,
     required this.logoText,
+    required this.isPublic,
   });
 
   @override
@@ -209,6 +244,7 @@ class _EducationItem extends StatelessWidget {
                   logoColor: logoColor,
                   logoText: logoText,
                   isPending: isPending,
+                  showBadge: !isPublic,
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -222,72 +258,190 @@ class _EducationItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (institution != null)
-                  Text(
-                    institution!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+            child: isPublic
+                ? _PublicEducationContent(
+                    institution: institution,
+                    period: period,
+                    course: course,
+                    description: description,
                   )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'instituição',
+                : _PrivateEducationContent(
+                    institution: institution,
+                    period: period,
+                    course: course,
+                    description: description,
                   ),
-                const SizedBox(height: 4),
-                if (period != null)
-                  Text(
-                    period!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.62),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'período',
-                  ),
-                const SizedBox(height: 14),
-                if (course != null)
-                  Text(
-                    course!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.74),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'curso',
-                  ),
-                const SizedBox(height: 6),
-                if (description != null)
-                  Text(
-                    description!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.35,
-                      color: Colors.white.withOpacity(0.62),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'descrição',
-                  ),
-              ],
-            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PublicEducationContent extends StatelessWidget {
+  final String? institution;
+  final String? period;
+  final String? course;
+  final String? description;
+
+  const _PublicEducationContent({
+    required this.institution,
+    required this.period,
+    required this.course,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+
+    if (institution != null) {
+      children.add(
+        Text(
+          institution!,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    if (period != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
+      }
+
+      children.add(
+        Text(
+          period!,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.62),
+          ),
+        ),
+      );
+    }
+
+    if (course != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 14));
+      }
+
+      children.add(
+        Text(
+          course!,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withOpacity(0.74),
+          ),
+        ),
+      );
+    }
+
+    if (description != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 6));
+      }
+
+      children.add(
+        Text(
+          description!,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.35,
+            color: Colors.white.withOpacity(0.62),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+}
+
+class _PrivateEducationContent extends StatelessWidget {
+  final String? institution;
+  final String? period;
+  final String? course;
+  final String? description;
+
+  const _PrivateEducationContent({
+    required this.institution,
+    required this.period,
+    required this.course,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (institution != null)
+          Text(
+            institution!,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'instituição',
+          ),
+        const SizedBox(height: 4),
+        if (period != null)
+          Text(
+            period!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.62),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'período',
+          ),
+        const SizedBox(height: 14),
+        if (course != null)
+          Text(
+            course!,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.74),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'curso',
+          ),
+        const SizedBox(height: 6),
+        if (description != null)
+          Text(
+            description!,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              color: Colors.white.withOpacity(0.62),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'descrição',
+          ),
+      ],
     );
   }
 }
@@ -330,12 +484,14 @@ class _StatusLogo extends StatelessWidget {
   final Color logoColor;
   final String logoText;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusLogo({
     required this.logoUrl,
     required this.logoColor,
     required this.logoText,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -343,6 +499,17 @@ class _StatusLogo extends StatelessWidget {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final theme = Theme.of(context);
     final pendingColor = Colors.amber.shade300;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 36,
+        height: 36,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: _buildLogoImage(),
+        ),
+      );
+    }
 
     return SizedBox(
       width: 36,

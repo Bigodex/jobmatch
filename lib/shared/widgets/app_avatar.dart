@@ -2,6 +2,8 @@
 // APP AVATAR
 // -------------------------------------------------------
 // Agora editável
+// - imagem remota
+// - avatar padrão em SVG
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -9,19 +11,24 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/constants/app_icons.dart';
 
 class AppAvatar extends StatelessWidget {
-  final String imageUrl;
+  final String? imageUrl;
   final double size;
 
   final bool isEditable;
   final VoidCallback? onEdit;
 
+  static const String _defaultProfileAsset = 'assets/images/jobu_profile.svg';
+
   const AppAvatar({
     super.key,
-    required this.imageUrl,
+    this.imageUrl,
     this.size = 80,
     this.isEditable = false,
     this.onEdit,
   });
+
+  bool get _hasImage =>
+      imageUrl != null && imageUrl!.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +50,27 @@ class AppAvatar extends StatelessWidget {
             child: CircleAvatar(
               radius: size / 2,
               backgroundColor: theme.colorScheme.surface,
-              child: CircleAvatar(
-                radius: (size / 2) - 4,
-                backgroundImage: NetworkImage(imageUrl),
+              child: ClipOval(
+                child: SizedBox(
+                  width: size - 8,
+                  height: size - 8,
+                  child: _hasImage
+                      ? Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return _buildDefaultAvatar();
+                          },
+                        )
+                      : _buildDefaultAvatar(),
+                ),
               ),
             ),
           ),
 
-          // 🔥 ÍCONE DE EDIÇÃO
+          // ===================================================
+          // ÍCONE DE EDIÇÃO
+          // ===================================================
           if (isEditable)
             Positioned(
               bottom: 0,
@@ -74,6 +94,13 @@ class AppAvatar extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDefaultAvatar() {
+    return SvgPicture.asset(
+      _defaultProfileAsset,
+      fit: BoxFit.cover,
     );
   }
 }

@@ -24,11 +24,34 @@ import 'package:jobmatch/features/profile/models/experience_model.dart';
 
 class ProfileExperience extends StatelessWidget {
   final List<ExperienceModel> experiences;
+  final bool isPublic;
 
   const ProfileExperience({
     super.key,
     required this.experiences,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required List<ExperienceModel> experiences,
+  }) {
+    return experiences.any(_hasVisibleContent);
+  }
+
+  static bool _hasVisibleContent(ExperienceModel experience) {
+    final company = _safe(experience.company);
+    final period = _formatPeriod(
+      experience.startDate,
+      experience.endDate,
+    );
+    final role = _safe(experience.role);
+    final description = _safe(experience.description);
+
+    return company != null ||
+        period != null ||
+        role != null ||
+        description != null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +59,14 @@ class ProfileExperience extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
 
     final sortedExperiences = [...experiences]..sort(_sortExperiences);
+
+    final visibleExperiences = isPublic
+        ? sortedExperiences.where(_hasVisibleContent).toList()
+        : sortedExperiences;
+
+    if (isPublic && visibleExperiences.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -70,32 +101,33 @@ class ProfileExperience extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    context.push(
-                      '/edit-experience',
-                      extra: experiences,
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      context.push(
+                        '/edit-experience',
+                        extra: experiences,
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
             Divider(color: theme.dividerColor.withOpacity(0.2)),
             const SizedBox(height: 8),
-            if (sortedExperiences.isEmpty)
+            if (!isPublic && sortedExperiences.isEmpty)
               const _PendingExperienceItem(
                 fieldName: 'Experiência',
               )
             else
               Column(
-                children: sortedExperiences.asMap().entries.map((entry) {
+                children: visibleExperiences.asMap().entries.map((entry) {
                   final index = entry.key;
                   final experience = entry.value;
 
                   return Padding(
                     padding: EdgeInsets.only(
-                      bottom: index == sortedExperiences.length - 1 ? 0 : 24,
+                      bottom: index == visibleExperiences.length - 1 ? 0 : 24,
                     ),
                     child: _ExperienceItem(
                       company: _safe(experience.company),
@@ -108,6 +140,7 @@ class ProfileExperience extends StatelessWidget {
                       logoUrl: _safe(experience.logoUrl),
                       logoColor: _getLogoColor(experience.company),
                       logoText: _getLogoText(experience.company),
+                      isPublic: isPublic,
                     ),
                   );
                 }).toList(),
@@ -194,6 +227,7 @@ class _ExperienceItem extends StatelessWidget {
   final String? logoUrl;
   final Color logoColor;
   final String logoText;
+  final bool isPublic;
 
   const _ExperienceItem({
     required this.company,
@@ -203,6 +237,7 @@ class _ExperienceItem extends StatelessWidget {
     required this.logoUrl,
     required this.logoColor,
     required this.logoText,
+    required this.isPublic,
   });
 
   @override
@@ -225,6 +260,7 @@ class _ExperienceItem extends StatelessWidget {
                   logoColor: logoColor,
                   logoText: logoText,
                   isPending: isPending,
+                  showBadge: !isPublic,
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -238,72 +274,190 @@ class _ExperienceItem extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (company != null)
-                  Text(
-                    company!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+            child: isPublic
+                ? _PublicExperienceContent(
+                    company: company,
+                    period: period,
+                    role: role,
+                    description: description,
                   )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'empresa',
+                : _PrivateExperienceContent(
+                    company: company,
+                    period: period,
+                    role: role,
+                    description: description,
                   ),
-                const SizedBox(height: 4),
-                if (period != null)
-                  Text(
-                    period!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.62),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'período',
-                  ),
-                const SizedBox(height: 14),
-                if (role != null)
-                  Text(
-                    role!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.74),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'cargo',
-                  ),
-                const SizedBox(height: 6),
-                if (description != null)
-                  Text(
-                    description!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.35,
-                      color: Colors.white.withOpacity(0.62),
-                    ),
-                  )
-                else
-                  _pendingText(
-                    context: context,
-                    fieldName: 'descrição',
-                  ),
-              ],
-            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PublicExperienceContent extends StatelessWidget {
+  final String? company;
+  final String? period;
+  final String? role;
+  final String? description;
+
+  const _PublicExperienceContent({
+    required this.company,
+    required this.period,
+    required this.role,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+
+    if (company != null) {
+      children.add(
+        Text(
+          company!,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+
+    if (period != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
+      }
+
+      children.add(
+        Text(
+          period!,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.62),
+          ),
+        ),
+      );
+    }
+
+    if (role != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 14));
+      }
+
+      children.add(
+        Text(
+          role!,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withOpacity(0.74),
+          ),
+        ),
+      );
+    }
+
+    if (description != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 6));
+      }
+
+      children.add(
+        Text(
+          description!,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.35,
+            color: Colors.white.withOpacity(0.62),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+}
+
+class _PrivateExperienceContent extends StatelessWidget {
+  final String? company;
+  final String? period;
+  final String? role;
+  final String? description;
+
+  const _PrivateExperienceContent({
+    required this.company,
+    required this.period,
+    required this.role,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (company != null)
+          Text(
+            company!,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'empresa',
+          ),
+        const SizedBox(height: 4),
+        if (period != null)
+          Text(
+            period!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.62),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'período',
+          ),
+        const SizedBox(height: 14),
+        if (role != null)
+          Text(
+            role!,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.74),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'cargo',
+          ),
+        const SizedBox(height: 6),
+        if (description != null)
+          Text(
+            description!,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              color: Colors.white.withOpacity(0.62),
+            ),
+          )
+        else
+          _pendingText(
+            context: context,
+            fieldName: 'descrição',
+          ),
+      ],
     );
   }
 }
@@ -346,12 +500,14 @@ class _StatusLogo extends StatelessWidget {
   final Color logoColor;
   final String logoText;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusLogo({
     required this.logoUrl,
     required this.logoColor,
     required this.logoText,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -359,6 +515,17 @@ class _StatusLogo extends StatelessWidget {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final theme = Theme.of(context);
     final pendingColor = Colors.amber.shade300;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 36,
+        height: 36,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: _buildLogoImage(),
+        ),
+      );
+    }
 
     return SizedBox(
       width: 36,

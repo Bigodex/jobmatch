@@ -17,16 +17,40 @@ import 'package:jobmatch/features/profile/models/social_link_model.dart';
 
 class ProfileLinks extends StatelessWidget {
   final List<SocialLinkModel> links;
+  final bool isPublic;
 
   const ProfileLinks({
     super.key,
     required this.links,
+    this.isPublic = false,
   });
+
+  static bool hasPublicContent({
+    required List<SocialLinkModel> links,
+  }) {
+    return links.any((link) {
+      final label = link.label.trim();
+      final url = link.url.trim();
+      return label.isNotEmpty || url.isNotEmpty;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
+
+    final visibleLinks = isPublic
+        ? links.where((link) {
+            final label = link.label.trim();
+            final url = link.url.trim();
+            return label.isNotEmpty || url.isNotEmpty;
+          }).toList()
+        : links;
+
+    if (isPublic && visibleLinks.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -63,15 +87,16 @@ class ProfileLinks extends StatelessWidget {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    context.push(
-                      '/edit-links',
-                      extra: links,
-                    );
-                  },
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
+                if (!isPublic)
+                  IconButton(
+                    onPressed: () {
+                      context.push(
+                        '/edit-links',
+                        extra: links,
+                      );
+                    },
+                    icon: const Icon(Icons.edit, size: 18),
+                  ),
               ],
             ),
 
@@ -81,19 +106,22 @@ class ProfileLinks extends StatelessWidget {
             // ===================================================
             // CONTEÚDO
             // ===================================================
-            if (links.isEmpty)
+            if (!isPublic && links.isEmpty)
               const _PendingLinkItem(
                 fieldName: 'links',
               )
             else
               Column(
-                children: List.generate(links.length, (index) {
-                  final link = links[index];
+                children: List.generate(visibleLinks.length, (index) {
+                  final link = visibleLinks[index];
 
                   return Column(
                     children: [
-                      _LinkItem(link: link),
-                      if (index != links.length - 1)
+                      _LinkItem(
+                        link: link,
+                        isPublic: isPublic,
+                      ),
+                      if (index != visibleLinks.length - 1)
                         Divider(
                           height: 20,
                           color: theme.dividerColor.withOpacity(0.2),
@@ -103,19 +131,21 @@ class ProfileLinks extends StatelessWidget {
                 }),
               ),
 
-            const SizedBox(height: 14),
+            if (!isPublic) ...[
+              const SizedBox(height: 14),
 
-            // ===================================================
-            // BOTÃO ADD
-            // ===================================================
-            _AddLinkButton(
-              onTap: () {
-                context.push(
-                  '/edit-links',
-                  extra: links,
-                );
-              },
-            ),
+              // ===================================================
+              // BOTÃO ADD
+              // ===================================================
+              _AddLinkButton(
+                onTap: () {
+                  context.push(
+                    '/edit-links',
+                    extra: links,
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -129,9 +159,11 @@ class ProfileLinks extends StatelessWidget {
 
 class _LinkItem extends StatelessWidget {
   final SocialLinkModel link;
+  final bool isPublic;
 
   const _LinkItem({
     required this.link,
+    required this.isPublic,
   });
 
   @override
@@ -149,42 +181,60 @@ class _LinkItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.links,
           isPending: isPending,
+          showBadge: !isPublic,
         ),
         const SizedBox(width: 10),
-
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasLabel)
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+              if (isPublic) ...[
+                if (hasLabel)
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'nome do link',
-                ),
-
-              const SizedBox(height: 4),
-
-              if (hasUrl)
-                Text(
-                  url,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Colors.white.withOpacity(0.62),
+                if (hasLabel && hasUrl) const SizedBox(height: 4),
+                if (hasUrl)
+                  Text(
+                    url,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
                   ),
-                )
-              else
-                _pendingText(
-                  context: context,
-                  fieldName: 'url',
-                ),
+              ] else ...[
+                if (hasLabel)
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'nome do link',
+                  ),
+                const SizedBox(height: 4),
+                if (hasUrl)
+                  Text(
+                    url,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.white.withOpacity(0.62),
+                    ),
+                  )
+                else
+                  _pendingText(
+                    context: context,
+                    fieldName: 'url',
+                  ),
+              ],
             ],
           ),
         ),
@@ -212,6 +262,7 @@ class _PendingLinkItem extends StatelessWidget {
         _StatusIcon(
           icon: AppIcons.links,
           isPending: true,
+          showBadge: true,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -305,10 +356,12 @@ Widget _pendingText({
 class _StatusIcon extends StatelessWidget {
   final String icon;
   final bool isPending;
+  final bool showBadge;
 
   const _StatusIcon({
     required this.icon,
     required this.isPending,
+    required this.showBadge,
   });
 
   @override
@@ -317,6 +370,18 @@ class _StatusIcon extends StatelessWidget {
     final colors = theme.extension<AppColorsExtension>()!;
     final pendingColor = Colors.amber.shade300;
     final successColor = theme.colorScheme.primary;
+
+    if (!showBadge) {
+      return SizedBox(
+        width: 18,
+        height: 18,
+        child: SvgPicture.asset(
+          icon,
+          width: 16,
+          height: 16,
+        ),
+      );
+    }
 
     return SizedBox(
       width: 18,

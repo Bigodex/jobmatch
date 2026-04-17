@@ -50,14 +50,13 @@ class AppBottomNav extends StatelessWidget {
           height: 3,
           width: 20,
           margin: const EdgeInsets.only(bottom: 4),
-
           decoration: BoxDecoration(
             color: isActive ? theme.colorScheme.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
         ),
 
-        // 🔥 Ícone (NÃO se move)
+        // 🔥 Ícone
         SvgPicture.asset(
           asset,
           width: 24,
@@ -80,33 +79,39 @@ class AppBottomNav extends StatelessWidget {
 
     return Scaffold(
       body: child,
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         onTap: (index) => _onItemTapped(context, index),
-
-        // 🔥 agora vem do theme
         backgroundColor: theme.bottomNavigationBarTheme.backgroundColor,
         selectedItemColor: theme.bottomNavigationBarTheme.selectedItemColor,
         unselectedItemColor: theme.bottomNavigationBarTheme.unselectedItemColor,
-
         elevation: 0,
         type: BottomNavigationBarType.fixed,
-
         showSelectedLabels: false,
         showUnselectedLabels: false,
-
         items: [
           BottomNavigationBarItem(
-            icon: _buildIcon(context, AppIcons.house, currentIndex == 0),
+            icon: _buildIcon(
+              context,
+              currentIndex == 0 ? AppIcons.housefull : AppIcons.house,
+              currentIndex == 0,
+            ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: _buildIcon(context, AppIcons.chat, currentIndex == 1),
+            icon: _buildIcon(
+              context,
+              currentIndex == 1 ? AppIcons.chatfull : AppIcons.chat,
+              currentIndex == 1,
+            ),
             label: 'Chat',
           ),
           BottomNavigationBarItem(
-            icon: _buildIcon(context, AppIcons.group, currentIndex == 2),
+            icon: _buildIcon(
+              context,
+              currentIndex == 2 ? AppIcons.user : AppIcons.userempty,
+              currentIndex == 2,
+            ),
             label: 'Profile',
           ),
         ],

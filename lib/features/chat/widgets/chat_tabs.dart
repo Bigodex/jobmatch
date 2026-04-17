@@ -1,56 +1,96 @@
 // =======================================================
 // CHAT TABS
+// -------------------------------------------------------
+// Visual alinhado à tela de conexões
 // =======================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 
-class ChatTabs extends StatelessWidget {
+import '../providers/chat_provider.dart';
+
+class ChatTabs extends ConsumerWidget {
   const ChatTabs({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentTab = ref.watch(chatTabProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-
-      child: Row(
-        children: const [
-          Expanded(child: _TabItem(label: 'Pessoas', active: true)),
-          SizedBox(width: 12),
-          Expanded(child: _TabItem(label: 'Empresas')),
-        ],
-      ),
+    return Row(
+      children: [
+        Expanded(
+          child: _ChatTopTab(
+            label: 'Pessoas',
+            isSelected: currentTab == ChatInboxTab.people,
+            isLeft: true,
+            onTap: () {
+              ref.read(chatTabProvider.notifier).state = ChatInboxTab.people;
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ChatTopTab(
+            label: 'Empresas',
+            isSelected: currentTab == ChatInboxTab.companies,
+            isLeft: false,
+            onTap: () {
+              ref.read(chatTabProvider.notifier).state = ChatInboxTab.companies;
+            },
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _TabItem extends StatelessWidget {
+class _ChatTopTab extends StatelessWidget {
   final String label;
-  final bool active;
+  final bool isSelected;
+  final bool isLeft;
+  final VoidCallback onTap;
 
-  const _TabItem({
+  const _ChatTopTab({
     required this.label,
-    this.active = false,
+    required this.isSelected,
+    required this.isLeft,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<AppColorsExtension>()!;
+    final theme = Theme.of(context);
+    final appColors = theme.extension<AppColorsExtension>()!;
 
-    return Container(
-      height: 44,
-      alignment: Alignment.center,
+    final selectedRadius = BorderRadius.only(
+      topLeft: const Radius.circular(30),
+      topRight: const Radius.circular(30),
+      bottomLeft: Radius.circular(isLeft ? 2 : 30),
+      bottomRight: Radius.circular(isLeft ? 30 : 2),
+    );
 
-      decoration: BoxDecoration(
-        color: active ? colors.cardSecondary : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 46,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? appColors.cardTertiary : Colors.transparent,
+          borderRadius: selectedRadius,
+        ),
+        child: Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: isSelected
+                ? Colors.white
+                : Colors.white.withOpacity(0.78),
+          ),
         ),
       ),
-
-      child: Text(label),
     );
   }
 }
