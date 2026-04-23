@@ -5,6 +5,7 @@
 // + conexão entre usuários
 // + status da conexão
 // + listagem de conexões
+// + conexões em comum
 // =======================================================
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +73,29 @@ final userConnectionsProvider = FutureProvider.autoDispose
 });
 
 // =======================================================
+// CONEXÕES EM COMUM
+// -------------------------------------------------------
+// cruza:
+// - minhas conexões
+// - conexões do usuário visitado
+// =======================================================
+final mutualConnectionsProvider = FutureProvider.autoDispose
+    .family<List<NetworkDiscoverProfileModel>, String>((ref, userId) async {
+  final myConnections = await ref.watch(myConnectionsProvider.future);
+  final otherUserConnections = await ref.watch(
+    userConnectionsProvider(userId).future,
+  );
+
+  final myConnectionIds = myConnections.map((item) => item.id).toSet();
+
+  final mutualConnections = otherUserConnections.where((item) {
+    return myConnectionIds.contains(item.id);
+  }).toList();
+
+  return mutualConnections;
+});
+
+// =======================================================
 // CONTROLLER
 // -------------------------------------------------------
 // Responsável por conectar / desconectar e atualizar
@@ -126,6 +150,7 @@ class NetworkConnectionController extends StateNotifier<AsyncValue<void>> {
 
     if (userId != null && userId.trim().isNotEmpty) {
       ref.invalidate(userConnectionsProvider(userId));
+      ref.invalidate(mutualConnectionsProvider(userId));
       ref.invalidate(networkConnectionStatusProvider(userId));
       ref.invalidate(publicProfileProvider(userId));
     }
@@ -147,6 +172,9 @@ class NetworkConnectionController extends StateNotifier<AsyncValue<void>> {
 
     // lista de conexões do perfil público aberto
     ref.invalidate(userConnectionsProvider(targetUserId));
+
+    // conexões em comum do perfil público aberto
+    ref.invalidate(mutualConnectionsProvider(targetUserId));
 
     // atualiza contadores e dados do perfil do usuário logado
     ref.invalidate(profileProvider);

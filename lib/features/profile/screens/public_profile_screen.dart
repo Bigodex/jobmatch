@@ -6,6 +6,8 @@
 // - atualiza ao entrar
 // - suporta pull-to-refresh
 // - botão de conexão funcional
+// - registra visualização de perfil
+// - abre conexões públicas do usuário
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -15,7 +17,10 @@ import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
+import 'package:jobmatch/features/auth/providers/auth_provider.dart';
 import 'package:jobmatch/features/network/providers/network_provider.dart';
+import 'package:jobmatch/features/network/services/profile_views_service.dart';
+import 'package:jobmatch/features/profile/providers/profile_provider.dart';
 import 'package:jobmatch/features/profile/providers/public_profile_provider.dart';
 
 import 'package:jobmatch/features/profile/widgets/profile_education.dart';
@@ -35,10 +40,7 @@ import '../widgets/profile_resume.dart';
 class PublicProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
-  const PublicProfileScreen({
-    super.key,
-    required this.userId,
-  });
+  const PublicProfileScreen({super.key, required this.userId});
 
   @override
   ConsumerState<PublicProfileScreen> createState() =>
@@ -46,6 +48,8 @@ class PublicProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
+  bool _hasRegisteredView = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +59,15 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       ref.invalidate(publicProfileProvider(widget.userId));
       ref.invalidate(networkConnectionStatusProvider(widget.userId));
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant PublicProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.userId != widget.userId) {
+      _hasRegisteredView = false;
+    }
   }
 
   Future<void> _refreshPublicProfile() async {
@@ -73,11 +86,18 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     final appColors = theme.extension<AppColorsExtension>()!;
 
     final profileAsync = ref.watch(publicProfileProvider(widget.userId));
-    final connectionStatusAsync =
-        ref.watch(networkConnectionStatusProvider(widget.userId));
-    final connectionActionState = ref.watch(networkConnectionControllerProvider);
-    final connectionController =
-        ref.read(networkConnectionControllerProvider.notifier);
+    final myProfileAsync = ref.watch(profileProvider);
+    final authUser = ref.watch(authStateProvider).value;
+
+    final connectionStatusAsync = ref.watch(
+      networkConnectionStatusProvider(widget.userId),
+    );
+    final connectionActionState = ref.watch(
+      networkConnectionControllerProvider,
+    );
+    final connectionController = ref.read(
+      networkConnectionControllerProvider.notifier,
+    );
 
     const bool previewSkeleton = false;
 
@@ -119,10 +139,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            AppHeader(
-              title: headerTitle,
-              showBackButton: true,
-            ),
+            AppHeader(title: headerTitle, showBackButton: true),
             Expanded(
               child: previewSkeleton
                   ? const ProfileScreenSkeleton()
@@ -131,6 +148,36 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                       displacement: 24,
                       child: profileAsync.when(
                         data: (profile) {
+                          final myProfile = myProfileAsync.maybeWhen(
+                            data: (profile) => profile,
+                            orElse: () => null,
+                          );
+
+                          if (!_hasRegisteredView &&
+                              authUser != null &&
+                              myProfile != null &&
+                              authUser.uid.isNotEmpty &&
+                              authUser.uid != widget.userId) {
+                            WidgetsBinding.instance.addPostFrameCallback((
+                              _,
+                            ) async {
+                              if (!mounted || _hasRegisteredView) return;
+
+                              _hasRegisteredView = true;
+
+                              await ref
+                                  .read(profileViewsServiceProvider)
+                                  .registerProfileView(
+                                    viewedUserId: widget.userId,
+                                    viewerId: authUser.uid,
+                                    viewerName: myProfile.user.name,
+                                    viewerRole: myProfile.user.role,
+                                    viewerCity: myProfile.resume.city ?? '',
+                                    viewerAvatarUrl: myProfile.user.avatarUrl,
+                                  );
+                            });
+                          }
+
                           final sections = <Widget>[];
 
                           void addSection(Widget child) {
@@ -138,11 +185,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                               sections.add(const SizedBox(height: 16));
                             }
 
-                            sections.add(
-                              AppSectionCard(
-                                child: child,
-                              ),
-                            );
+                            sections.add(AppSectionCard(child: child));
                           }
 
                           if (ProfileResume.hasPublicContent(
@@ -238,6 +281,15 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                                   publicButtonColor: publicButtonColor,
                                   publicSecondaryStatLabel: 'Chat',
                                   publicSecondaryStatIconPath: AppIcons.chat,
+                                  onConnectionsTap: () {
+                                    final encodedName = Uri.encodeComponent(
+                                      profile.user.name,
+                                    );
+
+                                    context.push(
+                                      '/network/user/${widget.userId}/public-connections?name=$encodedName'
+                                    );
+                                  },
                                   onPublicSecondaryTap: () {
                                     context.push(
                                       '/chat/conversation/${widget.userId}',

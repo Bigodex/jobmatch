@@ -28,6 +28,7 @@ class AppIcons {
   static const String building = '${_base}building.svg';
   static const String buildingfull = '${_base}building_full.svg';
   static const String burger = '${_base}burger.svg';
+  static const String cameraplus = '${_base}camera_plus.svg';
   static const String cake = '${_base}cake.svg';
   static const String calendar = '${_base}calendar.svg';
   static const String calendarcheck = '${_base}calendar_check.svg';
@@ -44,6 +45,7 @@ class AppIcons {
   static const String eyeclosed = '${_base}eye_closed.svg';
   static const String group = '${_base}group.svg';
   static const String google = '${_base}google.svg';
+  static const String government = '${_base}government.svg';
   static const String hardskillsitem = '${_base}hard_skill_item.svg';
   static const String hashtag = '${_base}hashtag.svg';
   static const String headset = '${_base}headset.svg';
@@ -76,6 +78,7 @@ class AppIcons {
   static const String schedule = '${_base}schedule.svg';
   static const String softskills = '${_base}soft_skills.svg';
   static const String softskillsitem = '${_base}soft_skills_item.svg';
+  static const String skyscraper = '${_base}skyscraper.svg';
   static const String user = '${_base}user.svg';
   static const String userempty = '${_base}userempty.svg';
   static const String trash = '${_base}trash.svg';

@@ -8,6 +8,7 @@
 // - suporte a modo público (somente leitura)
 // - botão público dinâmico
 // - card de conexões clicável
+// - contador de views vindo do provider de visualizações
 // =======================================================
 
 import 'dart:io';
@@ -15,11 +16,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:jobmatch/core/services/cloudinary_service.dart';
 
 import 'package:jobmatch/features/profile/models/user_model.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
+import 'package:jobmatch/features/network/providers/profile_views_provider.dart';
 
 import '../../../shared/widgets/app_cover.dart';
 import '../../../shared/widgets/app_avatar.dart';
@@ -177,6 +180,15 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
         );
     final publicColor = widget.publicButtonColor ?? theme.colorScheme.primary;
 
+    final myViewsAsync = ref.watch(myProfileViewsProvider);
+
+    final viewsCount = widget.isPublic
+        ? widget.user.views
+        : myViewsAsync.maybeWhen(
+            data: (views) => views.length,
+            orElse: () => widget.user.views,
+          );
+
     return AppSectionCard(
       child: Column(
         children: [
@@ -232,9 +244,6 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
           showEditing
               ? Column(
                   children: [
-                    // =========================
-                    // NOME
-                    // =========================
                     TextField(
                       controller: nameController,
                       textAlign: TextAlign.center,
@@ -266,12 +275,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
-                    // =========================
-                    // CARGO
-                    // =========================
                     TextField(
                       controller: roleController,
                       textAlign: TextAlign.center,
@@ -369,8 +373,12 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                       : AppIcons.eye,
                   label: widget.isPublic
                       ? (widget.publicSecondaryStatLabel ?? 'Chat')
-                      : widget.user.views.toString(),
-                  onTap: widget.isPublic ? widget.onPublicSecondaryTap : null,
+                      : viewsCount.toString(),
+                  onTap: widget.isPublic
+                      ? widget.onPublicSecondaryTap
+                      : () {
+                          context.push('/viewers');
+                        },
                 ),
               ),
             ],
@@ -385,14 +393,14 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
             label: widget.isPublic
                 ? publicLabel
                 : isEditing
-                ? 'Salvar'
-                : 'Editar perfil',
+                    ? 'Salvar'
+                    : 'Editar perfil',
             icon: widget.isPublic ? publicIcon : const Icon(Icons.edit, size: 18),
             color: widget.isPublic
                 ? publicColor
                 : isEditing
-                ? theme.colorScheme.primary
-                : null,
+                    ? theme.colorScheme.primary
+                    : null,
             onPressed: () {
               if (widget.isPublic) {
                 widget.onConnect?.call();

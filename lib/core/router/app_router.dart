@@ -5,8 +5,11 @@
 import 'package:go_router/go_router.dart';
 import 'package:jobmatch/features/menu/screens/menu_screen.dart';
 
+import '../../features/company/screens/company_onboarding_flow_screen.dart';
 import '../../features/profile/screens/public_profile_screen.dart';
 import '../../features/network/screens/network_connections_screen.dart';
+import '../../features/network/screens/network_viewers.dart';
+import '../../features/network/screens/public_network_connections_screen.dart';
 
 // =======================================================
 // MODELS
@@ -100,6 +103,15 @@ final GoRouter appRouter = GoRouter(
     ),
 
     // ==================================================
+    // COMPANY ONBOARDING
+    // ==================================================
+    GoRoute(
+      path: '/company/onboarding',
+      name: 'company-onboarding',
+      builder: (context, state) => const CompanyOnboardingFlowScreen(),
+    ),
+
+    // ==================================================
     // MENU / FULLSCREEN
     // ==================================================
     GoRoute(
@@ -140,6 +152,26 @@ final GoRouter appRouter = GoRouter(
           initialTabIndex: 1,
         );
       },
+    ),
+
+    GoRoute(
+      path: '/network/user/:userId/public-connections',
+      name: 'public-network-connections',
+      builder: (context, state) {
+        final userId = state.pathParameters['userId']!;
+        final userName = state.uri.queryParameters['name'] ?? 'Usuário';
+
+        return PublicNetworkConnectionsScreen(
+          userId: userId,
+          userName: userName,
+        );
+      },
+    ),
+
+    GoRoute(
+      path: '/viewers',
+      name: 'viewers',
+      builder: (context, state) => const ViewersScreen(),
     ),
 
     // ==================================================

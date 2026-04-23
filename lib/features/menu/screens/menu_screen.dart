@@ -58,6 +58,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     }
   }
 
+  void _openCompanyOnboarding() {
+    context.push('/company/onboarding');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -226,7 +230,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                         _MenuTile(
                           iconPath: AppIcons.briefcase,
                           title: 'Pagina empresarial',
-                          onTap: () {},
+                          onTap: _openCompanyOnboarding,
                         ),
                         const SizedBox(height: 12),
 
