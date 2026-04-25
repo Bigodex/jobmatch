@@ -13,8 +13,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/features/company/providers/company_onboarding_provider.dart';
 import 'package:jobmatch/features/company/widgets/company_onboarding_step.dart';
+import 'package:jobmatch/features/company/widgets/steps/step_company_about.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_header.dart';
+import 'package:jobmatch/features/company/widgets/steps/step_company_hiring.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_identity.dart';
+import 'package:jobmatch/features/company/widgets/steps/step_company_jobs.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_header.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_jobu_tuto.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
@@ -145,22 +148,22 @@ class _CompanyOnboardingFlowScreenState
         return 'Vamos montar a página da sua empresa?';
 
       case CompanyOnboardingStep.identity:
-        return 'Agora preciso do Q nome, categoria e CNPJ da empresa.';
+        return 'Agora preciso dos dados da empresa.';
 
       case CompanyOnboardingStep.about:
-        return 'Boa! Agora quero entender melhor o perfil da empresa e o que ela faz.';
+        return 'Agora quero conhecer melhor a empresa.';
 
       case CompanyOnboardingStep.hiring:
-        return 'Sua empresa está contratando agora ou quer apenas montar a página primeiro?';
+        return 'Sua empresa está contratando agora?';
 
       case CompanyOnboardingStep.jobs:
-        return 'Perfeito. Então bora cadastrar pelo menos uma vaga para a empresa já entrar em cena.';
+        return 'Show! Bora cadastrar pelo menos uma vaga.';
 
       case CompanyOnboardingStep.team:
-        return 'Quantas pessoas trabalham aí hoje? Com isso eu já ajusto o porte empresarial de forma coerente.';
+        return 'Quantas pessoas trabalham aí hoje?';
 
       case CompanyOnboardingStep.checklist:
-        return 'Confere tudo direitinho antes de finalizar a página empresarial.';
+        return 'Confere tudo antes de finalizar a página.';
     }
   }
 
@@ -227,35 +230,33 @@ class _CompanyOnboardingFlowScreenState
         );
 
       case CompanyOnboardingStep.about:
-        return _CompanyPlaceholderStep(
-          title: 'Sobre a empresa',
-          subtitle: 'Setor, tipo, site e descrição',
-          description:
-              'Essa etapa será separada para apresentar melhor o perfil da empresa.',
-          primaryLabel: 'Continuar',
-          onPrimaryTap: _handleStepComplete,
+        return StepCompanyAbout(
+          onNext: _handleStepComplete,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
         );
 
       case CompanyOnboardingStep.hiring:
-        return _CompanyHiringPlaceholderStep(
-          onYes: () {
-            ref.read(companyOnboardingProvider.notifier).setHiring(true);
-            _handleStepComplete();
-          },
-          onNo: () {
-            ref.read(companyOnboardingProvider.notifier).setHiring(false);
-            _handleStepComplete();
+        return StepCompanyHiring(
+          onNext: _handleStepComplete,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
           },
         );
 
       case CompanyOnboardingStep.jobs:
-        return _CompanyPlaceholderStep(
-          title: 'Vagas',
-          subtitle: 'Cadastro inicial de vagas',
-          description:
-              'Esse step só aparece quando a empresa informa que está contratando.',
-          primaryLabel: 'Continuar',
-          onPrimaryTap: _handleStepComplete,
+        return StepCompanyJobs(
+          onNext: _handleStepComplete,
+          onJobuMessageChange: (msg) {
+            setState(() {
+              _jobuMessage = msg;
+            });
+          },
         );
 
       case CompanyOnboardingStep.team:
@@ -342,65 +343,6 @@ class _CompanyPlaceholderStep extends StatelessWidget {
               child: FilledButton(
                 onPressed: onPrimaryTap,
                 child: Text(primaryLabel),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =======================================================
-// PLACEHOLDER HIRING STEP
-// =======================================================
-class _CompanyHiringPlaceholderStep extends StatelessWidget {
-  final VoidCallback onYes;
-  final VoidCallback onNo;
-
-  const _CompanyHiringPlaceholderStep({
-    required this.onYes,
-    required this.onNo,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppSectionCard(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Sua empresa está contratando?',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Se tiver vagas para publicar, o fluxo leva você direto para o cadastro delas.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onYes,
-                child: const Text('Sim, tenho vagas para publicar'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: onNo,
-                child: const Text('Não, quero continuar sem vagas'),
               ),
             ),
           ],

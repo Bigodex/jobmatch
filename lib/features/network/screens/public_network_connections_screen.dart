@@ -189,7 +189,7 @@ class _PublicNetworkConnectionsScreenState
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _PublicConnectionsLabel(
-                                      title: 'Conexões',
+                                      title: 'Amigos',
                                       count: filteredConnections.length,
                                     ),
                                     const SizedBox(height: 14),

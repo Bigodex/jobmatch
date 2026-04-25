@@ -229,7 +229,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
                         _MenuTile(
                           iconPath: AppIcons.briefcase,
-                          title: 'Pagina empresarial',
+                          title: 'Pagina Empresarial',
                           onTap: _openCompanyOnboarding,
                         ),
                         const SizedBox(height: 12),
@@ -243,7 +243,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
                         _MenuTile(
                           iconPath: AppIcons.settings,
-                          title: 'Config gerais',
+                          title: 'Configurações',
                           onTap: () {},
                         ),
                         const SizedBox(height: 12),

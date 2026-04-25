@@ -5,33 +5,37 @@
 // =======================================================
 
 class AppIcons {
-
   // ===================================================
   // BASE PATH
   // ===================================================
-  
+
   static const String _base = 'assets/icons/';
   static const String _image = 'assets/images/';
 
   // ===================================================
   // ICONS (ORDEM ALFABÉTICA)
-// ===================================================
+  // ===================================================
 
   static const String adduser = '${_base}add_user.svg';
-  static const String at = '${_base}at.svg';
+  static const String antenna = '${_base}antenna.svg';
   static const String apple = '${_base}apple.svg';
   static const String arrowleft = '${_base}arrow_left.svg';
+  static const String at = '${_base}at.svg';
+  static const String bagmoney = '${_base}bagmoney.svg';
   static const String bell = '${_base}bell.svg';
   static const String bellfull = '${_base}bellfull.svg';
   static const String box = '${_base}box.svg';
+  static const String boxes = '${_base}boxes.svg';
   static const String briefcase = '${_base}briefcase.svg';
   static const String building = '${_base}building.svg';
   static const String buildingfull = '${_base}building_full.svg';
+  static const String buildingbriefcase = '${_base}buildingbriefcase.svg';
   static const String burger = '${_base}burger.svg';
-  static const String cameraplus = '${_base}camera_plus.svg';
+  static const String chart = '${_base}chart.svg';
   static const String cake = '${_base}cake.svg';
   static const String calendar = '${_base}calendar.svg';
   static const String calendarcheck = '${_base}calendar_check.svg';
+  static const String cameraplus = '${_base}camera_plus.svg';
   static const String cap = '${_base}cap.svg';
   static const String chat = '${_base}chat.svg';
   static const String chatfull = '${_base}chatfull.svg';
@@ -43,47 +47,76 @@ class AppIcons {
   static const String devops = '${_base}devops.svg';
   static const String eye = '${_base}eye.svg';
   static const String eyeclosed = '${_base}eye_closed.svg';
-  static const String group = '${_base}group.svg';
+  static const String fastcar = '${_base}fastcar.svg';
+  static const String feed = '${_base}feed.svg';
+  static const String five = '${_base}five.svg';
+  static const String four = '${_base}four.svg';
   static const String google = '${_base}google.svg';
   static const String government = '${_base}government.svg';
+  static const String group = '${_base}group.svg';
+  static const String hanger = '${_base}hanger.svg';
   static const String hardskillsitem = '${_base}hard_skill_item.svg';
   static const String hashtag = '${_base}hashtag.svg';
+  static const String healthy = '${_base}healthy.svg';
   static const String headset = '${_base}headset.svg';
+  static const String helmet = '${_base}helmet.svg';
+  static const String hotel = '${_base}hotel.svg';
   static const String house = '${_base}house.svg';
+  static const String homeoffice = '${_base}homeoffice.svg';
   static const String housefull = '${_base}housefull.svg';
-  static const String incomplete = '${_base}incomplete.svg';
-  static const String info = '${_base}info.svg';
-  static const String infofull = '${_base}infofull.svg';
-  static const String image = '${_base}image.svg';
+  static const String hybrid = '${_base}hybrid.svg';
   static const String id = '${_base}id.svg';
   static const String id2 = '${_base}id_2.svg';
+  static const String image = '${_base}image.svg';
+  static const String incomplete = '${_base}incomplete.svg';
+  static const String industry = '${_base}industry.svg';
+  static const String info = '${_base}info.svg';
+  static const String infofull = '${_base}infofull.svg';
+  static const String key = '${_base}key.svg';
   static const String language = '${_base}language.svg';
   static const String laptop = '${_base}laptop.svg';
+  static const String lamp = '${_base}lamp.svg';
+  static const String law = '${_base}law.svg';
   static const String leave = '${_base}leave.svg';
   static const String links = '${_base}links.svg';
+  static const String lipstick = '${_base}lipstick.svg';
   static const String lock = '${_base}lock.svg';
-  static const String nodes = '${_base}nodes.svg';
-  static const String mail= '${_base}mail.svg';
+  static const String mail = '${_base}mail.svg';
   static const String mobile = '${_base}mobile.svg';
+  static const String model = '${_base}model.svg';
+  static const String nodes = '${_base}nodes.svg';
   static const String one = '${_base}one.svg';
   static const String paint = '${_base}paint.svg';
   static const String pencil = '${_base}pencil.svg';
+  static const String planet = '${_base}planet.svg';
+  static const String plant = '${_base}plant.svg';
+  static const String presencial = '${_base}presencial.svg';
+  static const String pin = '${_base}pin.svg';
+  static const String popcorn = '${_base}popcorn.svg';
   static const String puzzle = '${_base}puzzle.svg';
+  static const String ray = '${_base}ray.svg';
   static const String resume = '${_base}resume.svg';
+  static const String rh = '${_base}rh.svg';
   static const String role = '${_base}role.svg';
   static const String save = '${_base}save.svg';
+  static const String schedule = '${_base}schedule.svg';
+  static const String service = '${_base}service.svg';
   static const String settings = '${_base}settings.svg';
   static const String shield = '${_base}shield.svg';
-  static const String state = '${_base}state.svg';
-  static const String schedule = '${_base}schedule.svg';
+  static const String skyscraper = '${_base}skyscraper.svg';
   static const String softskills = '${_base}soft_skills.svg';
   static const String softskillsitem = '${_base}soft_skills_item.svg';
-  static const String skyscraper = '${_base}skyscraper.svg';
-  static const String user = '${_base}user.svg';
-  static const String userempty = '${_base}userempty.svg';
+  static const String speaker = '${_base}speaker.svg';
+  static const String state = '${_base}state.svg';
+  static const String store = '${_base}store.svg';
+  static const String six = '${_base}six.svg';
   static const String trash = '${_base}trash.svg';
   static const String two = '${_base}two.svg';
+  static const String three = '${_base}three.svg';
+  static const String user = '${_base}user.svg';
+  static const String userempty = '${_base}userempty.svg';
   static const String verify = '${_base}verify.svg';
+  static const String wheel = '${_base}wheel.svg';
 
   // ===================================================
   // IMAGES

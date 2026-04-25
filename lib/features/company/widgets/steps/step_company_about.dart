@@ -1,11 +1,11 @@
 // =======================================================
-// STEP COMPANY IDENTITY
+// STEP COMPANY ABOUT
 // -------------------------------------------------------
-// Etapa de identificação da empresa
-// - nome da empresa
-// - categoria da empresa
-// - CNPJ
-// - mesmo padrão visual do onboarding
+// Etapa sobre da empresa
+// - slogan (opcional)
+// - tipo
+// - site oficial (opcional)
+// - descrição
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -21,50 +21,9 @@ import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 import 'package:jobmatch/shared/widgets/app_validated_selector_field.dart';
 
 // =======================================================
-// CNPJ FORMATTER
-// =======================================================
-class CnpjInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (digits.length > 14) {
-      digits = digits.substring(0, 14);
-    }
-
-    final formatted = _formatCnpj(digits);
-
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
-      composing: TextRange.empty,
-    );
-  }
-
-  static String _formatCnpj(String digits) {
-    if (digits.isEmpty) return '';
-
-    if (digits.length <= 2) {
-      return digits;
-    } else if (digits.length <= 5) {
-      return '${digits.substring(0, 2)}.${digits.substring(2)}';
-    } else if (digits.length <= 8) {
-      return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5)}';
-    } else if (digits.length <= 12) {
-      return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8)}';
-    } else {
-      return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8, 12)}-${digits.substring(12)}';
-    }
-  }
-}
-
-// =======================================================
 // TITLE CASE FORMATTER
 // =======================================================
-class CompanyTitleInputFormatter extends TextInputFormatter {
+class CompanyAboutTitleInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
@@ -103,88 +62,63 @@ class CompanyTitleInputFormatter extends TextInputFormatter {
 }
 
 // =======================================================
-// COMPANY CATEGORY OPTION
+// OPTION MODEL
 // =======================================================
-class CompanyCategoryOption {
+class CompanyAboutOption {
   final String label;
   final String icon;
 
-  const CompanyCategoryOption({
+  const CompanyAboutOption({
     required this.label,
     required this.icon,
   });
 }
 
-class StepCompanyIdentity extends ConsumerStatefulWidget {
+class StepCompanyAbout extends ConsumerStatefulWidget {
   final VoidCallback onNext;
   final Function(String?) onJobuMessageChange;
 
-  const StepCompanyIdentity({
+  const StepCompanyAbout({
     super.key,
     required this.onNext,
     required this.onJobuMessageChange,
   });
 
   @override
-  ConsumerState<StepCompanyIdentity> createState() =>
-      _StepCompanyIdentityState();
+  ConsumerState<StepCompanyAbout> createState() => _StepCompanyAboutState();
 }
 
-class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
-  late final TextEditingController companyNameController;
-  late final TextEditingController cnpjController;
+class _StepCompanyAboutState extends ConsumerState<StepCompanyAbout> {
+  late final TextEditingController sloganController;
+  late final TextEditingController websiteController;
+  late final TextEditingController descriptionController;
 
-  String? selectedCategory;
+  String? selectedCompanyType;
 
-  bool _companyNameHasError = false;
-  bool _companyCategoryHasError = false;
-  bool _cnpjHasError = false;
+  bool _typeHasError = false;
+  bool _descriptionHasError = false;
   bool _isNavigating = false;
 
-  static const List<CompanyCategoryOption> _companyCategories = [
-    CompanyCategoryOption(label: 'Agronegócio', icon: AppIcons.plant),
-    CompanyCategoryOption(label: 'Alimentação', icon: AppIcons.feed),
-    CompanyCategoryOption(label: 'Automotivo', icon: AppIcons.wheel),
-    CompanyCategoryOption(label: 'Beleza e Estética', icon: AppIcons.lipstick),
-    CompanyCategoryOption(label: 'Consultoria', icon: AppIcons.laptop),
-    CompanyCategoryOption(label: 'Construção Civil', icon: AppIcons.helmet),
-    CompanyCategoryOption(label: 'E-commerce', icon: AppIcons.store),
-    CompanyCategoryOption(label: 'Educação', icon: AppIcons.cap),
-    CompanyCategoryOption(label: 'Energia', icon: AppIcons.ray),
-    CompanyCategoryOption(label: 'Entretenimento', icon: AppIcons.popcorn),
-    CompanyCategoryOption(label: 'Financeiro', icon: AppIcons.bagmoney),
-    CompanyCategoryOption(label: 'Hotelaria', icon: AppIcons.hotel),
-    CompanyCategoryOption(label: 'Imobiliário', icon: AppIcons.key),
-    CompanyCategoryOption(label: 'Indústria', icon: AppIcons.industry),
-    CompanyCategoryOption(label: 'Jurídico', icon: AppIcons.law),
-    CompanyCategoryOption(label: 'Logística', icon: AppIcons.boxes),
-    CompanyCategoryOption(label: 'Marketing', icon: AppIcons.speaker),
-    CompanyCategoryOption(label: 'Moda', icon: AppIcons.hanger),
-    CompanyCategoryOption(label: 'Recursos Humanos', icon: AppIcons.rh),
-    CompanyCategoryOption(label: 'Saúde', icon: AppIcons.healthy),
-    CompanyCategoryOption(label: 'Serviços', icon: AppIcons.service),
-    CompanyCategoryOption(label: 'Tecnologia', icon: AppIcons.code),
-    CompanyCategoryOption(
-      label: 'Telecomunicações',
-      icon: AppIcons.antenna,
-    ),
-    CompanyCategoryOption(label: 'Turismo', icon: AppIcons.planet),
-    CompanyCategoryOption(label: 'Varejo', icon: AppIcons.fastcar),
+  static const List<CompanyAboutOption> _companyTypes = [
+    CompanyAboutOption(label: 'Empresa Privada', icon: AppIcons.buildingfull),
+    CompanyAboutOption(label: 'Empresa Pública', icon: AppIcons.government),
+    CompanyAboutOption(label: 'Startup', icon: AppIcons.ray),
+    CompanyAboutOption(label: 'ONG', icon: AppIcons.planet),
+    CompanyAboutOption(label: 'Cooperativa', icon: AppIcons.group),
+    CompanyAboutOption(label: 'MEI', icon: AppIcons.id2),
   ];
 
-  bool get _isCompanyNameValid => companyNameController.text.trim().length >= 2;
+  bool get _isCompanyTypeValid =>
+      selectedCompanyType != null && selectedCompanyType!.trim().isNotEmpty;
 
-  bool get _isCompanyCategoryValid =>
-      selectedCategory != null && selectedCategory!.trim().isNotEmpty;
+  bool get _isDescriptionValid => descriptionController.text.trim().length >= 20;
 
-  bool get _isCnpjValid => _hasCompleteCnpj(cnpjController.text);
+  CompanyAboutOption? get _selectedCompanyTypeOption {
+    if (selectedCompanyType == null) return null;
 
-  CompanyCategoryOption? get _selectedCategoryOption {
-    if (selectedCategory == null) return null;
-
-    for (final category in _companyCategories) {
-      if (category.label == selectedCategory) {
-        return category;
+    for (final item in _companyTypes) {
+      if (item.label == selectedCompanyType) {
+        return item;
       }
     }
 
@@ -197,23 +131,28 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
 
     final company = ref.read(companyOnboardingProvider);
 
-    companyNameController = TextEditingController(
-      text: company.companyName ?? '',
+    sloganController = TextEditingController(
+      text: company.slogan ?? '',
     );
 
-    selectedCategory = (company.companyCategory ?? '').trim().isEmpty
+    websiteController = TextEditingController(
+      text: company.website ?? '',
+    );
+
+    descriptionController = TextEditingController(
+      text: company.description ?? '',
+    );
+
+    selectedCompanyType = (company.companyType ?? '').trim().isEmpty
         ? null
-        : company.companyCategory;
-
-    cnpjController = TextEditingController(
-      text: _formatCnpj(company.cnpj ?? ''),
-    );
+        : company.companyType;
   }
 
   @override
   void dispose() {
-    companyNameController.dispose();
-    cnpjController.dispose();
+    sloganController.dispose();
+    websiteController.dispose();
+    descriptionController.dispose();
     super.dispose();
   }
 
@@ -233,30 +172,17 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
     );
   }
 
-  bool _hasCompleteCnpj(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    return digits.length == 14;
-  }
-
-  String _formatCnpj(String value) {
-    String digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-
-    if (digits.length > 14) {
-      digits = digits.substring(0, 14);
-    }
-
-    return CnpjInputFormatter._formatCnpj(digits);
-  }
-
-  void _persistIdentity() {
-    ref.read(companyOnboardingProvider.notifier).setIdentity(
-          companyName: companyNameController.text.trim(),
-          companyCategory: selectedCategory?.trim() ?? '',
-          cnpj: cnpjController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+  void _persistAbout() {
+    ref.read(companyOnboardingProvider.notifier).setAbout(
+          slogan: sloganController.text.trim(),
+          sector: '',
+          companyType: selectedCompanyType?.trim() ?? '',
+          website: websiteController.text.trim(),
+          description: descriptionController.text.trim(),
         );
   }
 
-  Future<void> _openCategorySelector() async {
+  Future<void> _openTypeSelector() async {
     final theme = Theme.of(context);
     final colors = theme.extension<AppColorsExtension>()!;
 
@@ -285,7 +211,7 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Categoria da Empresa',
+                  'Tipo da Empresa',
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
@@ -295,14 +221,14 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: _companyCategories.length,
+                    itemCount: _companyTypes.length,
                     separatorBuilder: (_, __) => Divider(
                       color: Colors.white.withOpacity(0.06),
                       height: 1,
                     ),
                     itemBuilder: (context, index) {
-                      final item = _companyCategories[index];
-                      final isSelected = item.label == selectedCategory;
+                      final item = _companyTypes[index];
+                      final isSelected = item.label == selectedCompanyType;
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -351,11 +277,8 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
     if (result == null) return;
 
     setState(() {
-      selectedCategory = result;
-
-      if (_companyCategoryHasError) {
-        _companyCategoryHasError = false;
-      }
+      selectedCompanyType = result;
+      if (_typeHasError) _typeHasError = false;
     });
 
     widget.onJobuMessageChange(null);
@@ -365,35 +288,29 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
     if (_isNavigating) return;
 
     setState(() {
-      _companyNameHasError = companyNameController.text.trim().length < 2;
-      _companyCategoryHasError =
-          selectedCategory == null || selectedCategory!.trim().isEmpty;
-      _cnpjHasError = !_hasCompleteCnpj(cnpjController.text);
+      _typeHasError =
+          selectedCompanyType == null || selectedCompanyType!.trim().isEmpty;
+      _descriptionHasError = descriptionController.text.trim().length < 20;
     });
 
-    if (_companyNameHasError) {
-      widget.onJobuMessageChange('Preciso do nome da empresa.');
+    if (_typeHasError) {
+      widget.onJobuMessageChange('Escolha o tipo da empresa.');
       return;
     }
 
-    if (_companyCategoryHasError) {
-      widget.onJobuMessageChange('Escolha a categoria da empresa.');
+    if (_descriptionHasError) {
+      widget.onJobuMessageChange('Descreva melhor a empresa.');
       return;
     }
 
-    if (_cnpjHasError) {
-      widget.onJobuMessageChange('Preciso do CNPJ completo.');
-      return;
-    }
-
-    _persistIdentity();
+    _persistAbout();
 
     setState(() {
       _isNavigating = true;
     });
 
     await _showJobuMessageAndWait(
-      'Boa. Dados principais salvos.',
+      'Ótimo. Perfil da empresa salvo.',
       minMilliseconds: 1200,
     );
 
@@ -411,9 +328,9 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 0),
+    return Transform.translate(
+      offset: const Offset(0, -6),
+      child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -436,13 +353,10 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
                     children: [
                       const SizedBox(height: 8),
 
-                      // ===================================================
-                      // HEADER
-                      // ===================================================
                       Row(
                         children: [
                           SvgPicture.asset(
-                            AppIcons.buildingfull,
+                            AppIcons.info,
                             width: 20,
                             height: 20,
                             colorFilter: const ColorFilter.mode(
@@ -452,7 +366,7 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
                           ),
                           const SizedBox(width: 10),
                           const Text(
-                            'Identificação da Empresa',
+                            'Sobre da Empresa',
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
@@ -468,29 +382,21 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
                       ),
                       const SizedBox(height: 16),
 
-                      // ===================================================
-                      // NOME DA EMPRESA
-                      // ===================================================
                       _editItem(
-                        icon: AppIcons.skyscraper,
-                        title: 'Nome da Empresa',
+                        icon: AppIcons.lamp,
+                        title: 'Slogan',
                         child: AppValidatedInputField(
-                          controller: companyNameController,
-                          hint: 'Digite o nome da empresa',
+                          controller: sloganController,
+                          hint: 'Ex: Conectando talentos ao futuro',
                           maxLength: 80,
-                          hasError: _companyNameHasError,
-                          isValid: _isCompanyNameValid,
-                          textCapitalization: TextCapitalization.words,
+                          hasError: false,
+                          isValid: sloganController.text.trim().isNotEmpty,
+                          textCapitalization: TextCapitalization.sentences,
                           inputFormatters: [
-                            CompanyTitleInputFormatter(),
+                            CompanyAboutTitleInputFormatter(),
                           ],
-                          onChanged: (value) {
-                            setState(() {
-                              if (_companyNameHasError) {
-                                _companyNameHasError = value.trim().length < 2;
-                              }
-                            });
-
+                          onChanged: (_) {
+                            setState(() {});
                             widget.onJobuMessageChange(null);
                           },
                         ),
@@ -498,44 +404,57 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
 
                       const SizedBox(height: 10),
 
-                      // ===================================================
-                      // CATEGORIA
-                      // ===================================================
                       _editItem(
-                        icon: AppIcons.nodes,
-                        title: 'Setor da Empresa',
+                        icon: AppIcons.building,
+                        title: 'Tipo',
                         child: AppValidatedSelectorField(
-                          hint: 'Selecione o setor da empresa',
-                          value: selectedCategory,
-                          selectedIcon: _selectedCategoryOption?.icon,
-                          onTap: _openCategorySelector,
-                          hasError: _companyCategoryHasError,
-                          isValid: _isCompanyCategoryValid,
+                          hint: 'Selecione o tipo da empresa',
+                          value: selectedCompanyType,
+                          selectedIcon: _selectedCompanyTypeOption?.icon,
+                          onTap: _openTypeSelector,
+                          hasError: _typeHasError,
+                          isValid: _isCompanyTypeValid,
                         ),
                       ),
 
                       const SizedBox(height: 10),
 
-                      // ===================================================
-                      // CNPJ
-                      // ===================================================
                       _editItem(
-                        icon: AppIcons.government,
-                        title: 'CNPJ',
+                        icon: AppIcons.links,
+                        title: 'Site Oficial',
                         child: AppValidatedInputField(
-                          controller: cnpjController,
-                          hint: 'Digite o CNPJ da empresa',
-                          maxLength: 18,
-                          hasError: _cnpjHasError,
-                          isValid: _isCnpjValid,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            CnpjInputFormatter(),
-                          ],
+                          controller: websiteController,
+                          hint: 'https://www.suaempresa.com.br',
+                          maxLength: 120,
+                          hasError: false,
+                          isValid: websiteController.text.trim().isNotEmpty,
+                          keyboardType: TextInputType.url,
+                          textCapitalization: TextCapitalization.none,
+                          onChanged: (_) {
+                            setState(() {});
+                            widget.onJobuMessageChange(null);
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      _editItem(
+                        icon: AppIcons.info,
+                        title: 'Descrição da Empresa',
+                        child: AppValidatedInputField(
+                          controller: descriptionController,
+                          hint:
+                              'Descreva a empresa, propósito, atuação e diferenciais.',
+                          maxLength: 500,
+                          maxLines: 6,
+                          hasError: _descriptionHasError,
+                          isValid: _isDescriptionValid,
+                          textCapitalization: TextCapitalization.sentences,
                           onChanged: (value) {
                             setState(() {
-                              if (_cnpjHasError) {
-                                _cnpjHasError = !_hasCompleteCnpj(value);
+                              if (_descriptionHasError) {
+                                _descriptionHasError = value.trim().length < 20;
                               }
                             });
 
