@@ -5,17 +5,19 @@
 // - normal
 // - erro   -> borda vermelha + exclamação
 // - válido -> borda primary + check
-// Suporta trailing customizado, como botão de olho da senha
-// -------------------------------------------------------
-// Ajuste:
-// - aceita focusNode
-// - aceita onEditingComplete
-// - aceita onTapOutside
-// - textarea: validação no topo superior direito
+//
+// Suporta:
+// - trailing customizado, como botão de olho da senha
+// - focusNode
+// - onEditingComplete
+// - onTapOutside
+// - textarea com validação no topo superior direito
 // =======================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../core/constants/app_colors.dart';
 
 class AppValidatedInputField extends StatelessWidget {
   final TextEditingController controller;
@@ -61,84 +63,39 @@ class AppValidatedInputField extends StatelessWidget {
     this.onTapOutside,
   });
 
+  // ===================================================
+  // BUILD
+  // ---------------------------------------------------
+  // Monta o TextField com borda dinâmica, ícone de
+  // validação e suporte a trailing customizado.
+  // ===================================================
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-    final errorColor = theme.colorScheme.error;
+    final primaryColor = AppColors.primary;
+    final errorColor = AppColors.error;
 
     final isMultilineField =
         !obscureText && ((maxLines ?? 1) > 1 || (minLines ?? 1) > 1);
 
-    OutlineInputBorder border(
-      Color color, {
-      double width = 1,
-    }) {
-      return OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(
-          color: color,
-          width: width,
-        ),
-      );
-    }
+    final validationIcon = _buildValidationIcon(
+      primaryColor: primaryColor,
+      errorColor: errorColor,
+    );
 
-    final Widget? validationIcon = hasError
-        ? Icon(
-            Icons.error_outline_rounded,
-            color: errorColor,
-            size: 20,
-          )
-        : isValid
-            ? Icon(
-                Icons.check_circle_rounded,
-                color: primaryColor,
-                size: 20,
-              )
-            : null;
+    final suffixIcon = _buildSuffixIcon(
+      isMultilineField: isMultilineField,
+      validationIcon: validationIcon,
+    );
 
-    Widget? suffixIcon;
+    final enabledBorder = _buildEnabledBorder(
+      primaryColor: primaryColor,
+      errorColor: errorColor,
+    );
 
-    if (isMultilineField) {
-      if (validationIcon != null) {
-        suffixIcon = Padding(
-          padding: const EdgeInsets.only(top: 10, right: 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              validationIcon,
-            ],
-          ),
-        );
-      }
-    } else {
-      if (validationIcon != null || trailing != null) {
-        suffixIcon = Padding(
-          padding: const EdgeInsets.only(right: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (trailing != null) trailing!,
-              if (trailing != null && validationIcon != null)
-                const SizedBox(width: 6),
-              if (validationIcon != null) validationIcon,
-            ],
-          ),
-        );
-      }
-    }
-
-    final OutlineInputBorder enabledBorder = hasError
-        ? border(errorColor)
-        : isValid
-            ? border(primaryColor)
-            : border(Colors.white24);
-
-    final OutlineInputBorder focusedBorder = hasError
-        ? border(errorColor, width: 1.5)
-        : border(primaryColor, width: 1.5);
+    final focusedBorder = _buildFocusedBorder(
+      primaryColor: primaryColor,
+      errorColor: errorColor,
+    );
 
     return TextField(
       controller: controller,
@@ -153,7 +110,10 @@ class AppValidatedInputField extends StatelessWidget {
       keyboardType: keyboardType,
       autofillHints: autofillHints,
       textAlign: textAlign,
-      style: const TextStyle(fontSize: 13),
+      style: const TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 13,
+      ),
       onChanged: onChanged,
       onEditingComplete: onEditingComplete,
       onTapOutside: onTapOutside,
@@ -161,7 +121,7 @@ class AppValidatedInputField extends StatelessWidget {
         hintText: hint,
         counterText: maxLength != null ? '' : null,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.04),
+        fillColor: AppColors.whiteOverlay(0.04),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 12,
@@ -174,6 +134,136 @@ class AppValidatedInputField extends StatelessWidget {
         enabledBorder: enabledBorder,
         focusedBorder: focusedBorder,
         disabledBorder: enabledBorder,
+      ),
+    );
+  }
+
+  // ===================================================
+  // BUILD VALIDATION ICON
+  // ---------------------------------------------------
+  // Retorna o ícone de erro ou sucesso conforme o estado
+  // do campo. Caso o campo esteja neutro, retorna null.
+  // ===================================================
+  Widget? _buildValidationIcon({
+    required Color primaryColor,
+    required Color errorColor,
+  }) {
+    if (hasError) {
+      return Icon(
+        Icons.error_outline_rounded,
+        color: errorColor,
+        size: 20,
+      );
+    }
+
+    if (isValid) {
+      return Icon(
+        Icons.check_circle_rounded,
+        color: primaryColor,
+        size: 20,
+      );
+    }
+
+    return null;
+  }
+
+  // ===================================================
+  // BUILD SUFFIX ICON
+  // ---------------------------------------------------
+  // Monta o espaço final do campo:
+  // - textarea: ícone no topo superior direito
+  // - campo comum: trailing + ícone de validação lado a lado
+  // ===================================================
+  Widget? _buildSuffixIcon({
+    required bool isMultilineField,
+    required Widget? validationIcon,
+  }) {
+    if (isMultilineField) {
+      if (validationIcon == null) {
+        return null;
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(top: 10, right: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            validationIcon,
+          ],
+        ),
+      );
+    }
+
+    if (validationIcon == null && trailing == null) {
+      return null;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ?trailing,
+          if (trailing != null && validationIcon != null)
+            const SizedBox(width: 6),
+          ?validationIcon,
+        ],
+      ),
+    );
+  }
+
+  // ===================================================
+  // BUILD ENABLED BORDER
+  // ---------------------------------------------------
+  // Define a borda do campo quando ele não está focado.
+  // ===================================================
+  OutlineInputBorder _buildEnabledBorder({
+    required Color primaryColor,
+    required Color errorColor,
+  }) {
+    if (hasError) {
+      return _border(errorColor);
+    }
+
+    if (isValid) {
+      return _border(primaryColor);
+    }
+
+    return _border(AppColors.whiteOverlay(0.24));
+  }
+
+  // ===================================================
+  // BUILD FOCUSED BORDER
+  // ---------------------------------------------------
+  // Define a borda do campo quando ele está focado.
+  // ===================================================
+  OutlineInputBorder _buildFocusedBorder({
+    required Color primaryColor,
+    required Color errorColor,
+  }) {
+    if (hasError) {
+      return _border(errorColor, width: 1.5);
+    }
+
+    return _border(primaryColor, width: 1.5);
+  }
+
+  // ===================================================
+  // BORDER
+  // ---------------------------------------------------
+  // Helper para manter o padrão visual das bordas.
+  // ===================================================
+  OutlineInputBorder _border(
+    Color color, {
+    double width = 1,
+  }) {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(
+        color: color,
+        width: width,
       ),
     );
   }

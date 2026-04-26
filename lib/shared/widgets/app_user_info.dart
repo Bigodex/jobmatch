@@ -1,10 +1,22 @@
 // =======================================================
 // APP USER INFO
 // -------------------------------------------------------
-// Nome + cargo do usuário
+// Exibe nome + cargo do usuário.
+//
+// Usado em áreas como:
+// - header do perfil
+// - cards de identidade
+// - blocos públicos de usuário
+//
+// Ajustes:
+// - remove withOpacity deprecated
+// - usa AppColors para cor secundária
+// - mantém assinatura pública do widget
 // =======================================================
 
 import 'package:flutter/material.dart';
+
+import '../../core/constants/app_colors.dart';
 
 class AppUserInfo extends StatelessWidget {
   final String name;
@@ -16,28 +28,33 @@ class AppUserInfo extends StatelessWidget {
     required this.role,
   });
 
+  // ===================================================
+  // BUILD
+  // ---------------------------------------------------
+  // Monta a coluna com nome e cargo do usuário.
+  // ===================================================
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Column(
       children: [
-
         Text(
           name,
+          textAlign: TextAlign.center,
           style: theme.textTheme.titleMedium?.copyWith(
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w600,
-            fontSize: 20
+            fontSize: 20,
           ),
         ),
-
         const SizedBox(height: 4),
-
         Text(
           role,
+          textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontSize: 16,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: AppColors.textSecondary,
           ),
         ),
       ],

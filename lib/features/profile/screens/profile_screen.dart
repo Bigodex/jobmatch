@@ -3,7 +3,11 @@
 // -------------------------------------------------------
 // Tela de perfil do usuário.
 // Orquestra Header + Resumo + seções.
-// Agora conectada com provider (dados reais)
+// Conectada com provider (dados reais).
+//
+// Ajuste:
+// - permite atualizar o currículo ao arrastar a tela para baixo
+// - usa RefreshIndicator igual comportamento da Network
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -29,6 +33,21 @@ import '../widgets/profile_resume.dart';
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  // ===================================================
+  // REFRESH PROFILE
+  // ---------------------------------------------------
+  // Recarrega os dados do perfil ao arrastar a tela
+  // para baixo.
+  // ===================================================
+  Future<void> _refreshProfile(WidgetRef ref) async {
+    await ref.read(profileProvider.notifier).loadProfile();
+  }
+
+  // ===================================================
+  // BUILD
+  // ---------------------------------------------------
+  // Monta a tela principal do currículo.
+  // ===================================================
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -58,97 +77,105 @@ class ProfileScreen extends ConsumerWidget {
                   ? const ProfileScreenSkeleton()
                   : profileAsync.when(
                       data: (profile) {
-                        return SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              // ---------------------------------------------
-                              // HEADER DO PERFIL
-                              // ---------------------------------------------
-                              ProfileHeader(
-                                user: profile.user,
-                                onConnectionsTap: () {
-                                  context.push('/network/connections');
-                                },
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // ---------------------------------------------
-                              // RESUMO PROFISSIONAL
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileResume(
-                                  resume: profile.resume,
-                                  email: profile.user.email,
+                        return RefreshIndicator(
+                          color: theme.colorScheme.primary,
+                          backgroundColor: theme.cardColor,
+                          onRefresh: () => _refreshProfile(ref),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              children: [
+                                // ---------------------------------------------
+                                // HEADER DO PERFIL
+                                // ---------------------------------------------
+                                ProfileHeader(
+                                  user: profile.user,
+                                  onConnectionsTap: () {
+                                    context.push('/network/connections');
+                                  },
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // IDIOMAS
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileLanguages(
-                                  languages: profile.languages,
+                                // ---------------------------------------------
+                                // RESUMO PROFISSIONAL
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileResume(
+                                    resume: profile.resume,
+                                    email: profile.user.email,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // SOFT SKILLS
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileSoftSkills(
-                                  skills: profile.softSkills,
+                                // ---------------------------------------------
+                                // IDIOMAS
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileLanguages(
+                                    languages: profile.languages,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // HARD SKILLS
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileHardSkills(
-                                  skills: profile.techSkills,
+                                // ---------------------------------------------
+                                // SOFT SKILLS
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileSoftSkills(
+                                    skills: profile.softSkills,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // EXPERIÊNCIA
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileExperience(
-                                  experiences: profile.experiences,
+                                // ---------------------------------------------
+                                // HARD SKILLS
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileHardSkills(
+                                    skills: profile.techSkills,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // FORMAÇÃO
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileEducation(
-                                  educations: profile.education,
+                                // ---------------------------------------------
+                                // EXPERIÊNCIA
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileExperience(
+                                    experiences: profile.experiences,
+                                  ),
                                 ),
-                              ),
 
-                              const SizedBox(height: 16),
+                                const SizedBox(height: 16),
 
-                              // ---------------------------------------------
-                              // LINKS
-                              // ---------------------------------------------
-                              AppSectionCard(
-                                child: ProfileLinks(links: profile.links),
-                              ),
+                                // ---------------------------------------------
+                                // FORMAÇÃO
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileEducation(
+                                    educations: profile.education,
+                                  ),
+                                ),
 
-                              const SizedBox(height: 32),
-                            ],
+                                const SizedBox(height: 16),
+
+                                // ---------------------------------------------
+                                // LINKS
+                                // ---------------------------------------------
+                                AppSectionCard(
+                                  child: ProfileLinks(
+                                    links: profile.links,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 32),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -161,8 +188,28 @@ class ProfileScreen extends ConsumerWidget {
                       // ===================================================
                       // ERROR
                       // ===================================================
-                      error: (e, _) =>
-                          Center(child: Text('Erro ao carregar perfil: $e')),
+                      error: (e, _) {
+                        return RefreshIndicator(
+                          color: theme.colorScheme.primary,
+                          backgroundColor: theme.cardColor,
+                          onRefresh: () => _refreshProfile(ref),
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.65,
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    'Erro ao carregar perfil: $e',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
             ),
           ],

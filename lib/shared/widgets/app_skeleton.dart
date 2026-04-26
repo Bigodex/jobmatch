@@ -1,10 +1,24 @@
-import 'package:flutter/material.dart';
-
 // =======================================================
 // APP SKELETON
 // -------------------------------------------------------
-// Skeleton genérico reutilizável com animação pulse
+// Skeleton genérico reutilizável com animação pulse.
+//
+// Suporta:
+// - largura customizada
+// - altura customizada
+// - borda arredondada
+// - formato circular ou retangular
+// - margem externa
+//
+// Ajustes:
+// - usa AppColors para overlays
+// - remove withOpacity deprecated
+// - organiza lógica em helpers
 // =======================================================
+
+import 'package:flutter/material.dart';
+
+import '../../core/constants/app_colors.dart';
 
 class AppSkeleton extends StatefulWidget {
   final double? width;
@@ -32,6 +46,12 @@ class _AppSkeletonState extends State<AppSkeleton>
   late final Animation<double> _opacityAnimation;
   late final Animation<double> _scaleAnimation;
 
+  // ===================================================
+  // INIT STATE
+  // ---------------------------------------------------
+  // Inicializa as animações de opacity e scale usadas
+  // para criar o efeito de pulse.
+  // ===================================================
   @override
   void initState() {
     super.initState();
@@ -62,32 +82,26 @@ class _AppSkeletonState extends State<AppSkeleton>
     );
   }
 
+  // ===================================================
+  // DISPOSE
+  // ---------------------------------------------------
+  // Libera o AnimationController para evitar vazamento
+  // de recursos quando o widget sair da árvore.
+  // ===================================================
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  // ===================================================
+  // BUILD
+  // ---------------------------------------------------
+  // Renderiza o skeleton animado.
+  // ===================================================
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final baseColor = isDark
-        ? Colors.white.withOpacity(0.12)
-        : Colors.black.withOpacity(0.08);
-
-    final skeletonChild = Container(
-      width: widget.width,
-      height: widget.height,
-      margin: widget.margin,
-      decoration: BoxDecoration(
-        color: baseColor,
-        shape: widget.shape,
-        borderRadius: widget.shape == BoxShape.circle
-            ? null
-            : BorderRadius.circular(widget.borderRadius),
-      ),
-    );
+    final skeletonChild = _buildSkeletonChild(context);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -102,5 +116,52 @@ class _AppSkeletonState extends State<AppSkeleton>
         );
       },
     );
+  }
+
+  // ===================================================
+  // BUILD SKELETON CHILD
+  // ---------------------------------------------------
+  // Cria o container base do skeleton.
+  // ===================================================
+  Widget _buildSkeletonChild(BuildContext context) {
+    return Container(
+      width: widget.width,
+      height: widget.height,
+      margin: widget.margin,
+      decoration: BoxDecoration(
+        color: _baseColor(context),
+        shape: widget.shape,
+        borderRadius: _borderRadius(),
+      ),
+    );
+  }
+
+  // ===================================================
+  // BASE COLOR
+  // ---------------------------------------------------
+  // Define a cor base do skeleton conforme o tema atual.
+  // ===================================================
+  Color _baseColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDark) {
+      return AppColors.whiteOverlay(0.12);
+    }
+
+    return AppColors.blackOverlay(0.08);
+  }
+
+  // ===================================================
+  // BORDER RADIUS
+  // ---------------------------------------------------
+  // Retorna borda arredondada apenas quando o skeleton
+  // não for circular.
+  // ===================================================
+  BorderRadius? _borderRadius() {
+    if (widget.shape == BoxShape.circle) {
+      return null;
+    }
+
+    return BorderRadius.circular(widget.borderRadius);
   }
 }
