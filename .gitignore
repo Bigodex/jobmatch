@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# =======================================================
+# PACK AUTOMATION
+# -------------------------------------------------------
+# Ignora pacotes externos usados para aplicar alterações
+# locais no projeto e backups gerados automaticamente.
+# =======================================================
+incoming_packs/
+packs/
+.pack_backups/

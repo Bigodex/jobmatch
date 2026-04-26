@@ -1,16 +1,26 @@
 // =======================================================
 // NETWORK SERVICE
 // -------------------------------------------------------
-// Busca perfis reais para a tela de networking
-// + cria / remove conexões
-// + verifica status de conexão
-// + lista conexões do usuário
-// + sincroniza contador em profiles e public_profiles
+// Service responsável pela camada de networking social.
+//
+// Responsabilidades:
+// - buscar perfis para exploração
+// - criar conexões entre usuários
+// - remover conexões
+// - verificar status de conexão
+// - listar conexões públicas ou privadas
+// - sincronizar contador de conexões
+//
+// Observação:
+// - não usar print() direto aqui
+// - não expor payloads completos no console
+// - logs devem passar pelo AppLogger
 // =======================================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../models/network_discover_profile_model.dart';
 
 class NetworkService {
@@ -24,22 +34,32 @@ class NetworkService {
         _auth = auth ?? FirebaseAuth.instance;
 
   // =======================================================
-  // UID ATUAL
+  // CURRENT UID
+  // -------------------------------------------------------
+  // Recupera o uid do usuário autenticado.
   // =======================================================
   String get _currentUid {
     final uid = _auth.currentUser?.uid;
+
     if (uid == null || uid.isEmpty) {
       throw Exception('Usuário não autenticado.');
     }
+
     return uid;
   }
 
   // =======================================================
-  // EXPLORAR PERFIS
+  // GET DISCOVER PROFILES
   // -------------------------------------------------------
+  // Busca perfis disponíveis para a tela de explorar rede.
+  //
   // Remove da grade:
   // - o próprio usuário logado
   // - usuários já conectados
+  //
+  // Fluxo:
+  // - tenta buscar primeiro em public_profiles
+  // - se não houver dados públicos, usa profiles como fallback
   // =======================================================
   Future<List<NetworkDiscoverProfileModel>> getDiscoverProfiles() async {
     final currentUid = _auth.currentUser?.uid;
@@ -49,7 +69,8 @@ class NetworkService {
           ? <String>{}
           : await _getConnectedUserIds(currentUid);
 
-      final publicSnapshot = await _firestore.collection('public_profiles').get();
+      final publicSnapshot =
+          await _firestore.collection('public_profiles').get();
 
       final publicProfiles = publicSnapshot.docs
           .map(
@@ -68,8 +89,9 @@ class NetworkService {
           (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
         );
 
-        print(
-          '✅ NETWORK: ${publicProfiles.length} perfis carregados de public_profiles',
+        AppLogger.info(
+          'Perfis carregados de public_profiles: ${publicProfiles.length}.',
+          name: 'NetworkService',
         );
 
         return publicProfiles;
@@ -111,20 +133,30 @@ class NetworkService {
         (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
       );
 
-      print(
-        '✅ NETWORK: ${profiles.length} perfis carregados de profiles (fallback)',
+      AppLogger.info(
+        'Perfis carregados de profiles fallback: ${profiles.length}.',
+        name: 'NetworkService',
       );
 
       return profiles;
-    } catch (e) {
-      print('❌ NETWORK ERROR: $e');
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao carregar perfis para explorar rede.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // CRIAR CONEXÃO
+  // CONNECT WITH USER
   // -------------------------------------------------------
+  // Cria uma conexão bidirecional entre o usuário logado e
+  // o usuário de destino.
+  //
   // Estrutura:
   // connections/{uid}/friends/{friendUid}
   // =======================================================
@@ -153,8 +185,13 @@ class NetworkService {
           .doc(currentUid);
 
       final alreadyConnected = await currentRef.get();
+
       if (alreadyConnected.exists) {
-        print('ℹ️ NETWORK: conexão já existe entre $currentUid e $targetUserId');
+        AppLogger.debug(
+          'Conexão já existente. Operação ignorada.',
+          name: 'NetworkService',
+        );
+
         return;
       }
 
@@ -177,15 +214,27 @@ class NetworkService {
         _syncConnectionsCount(targetUserId),
       ]);
 
-      print('✅ NETWORK: conexão criada entre $currentUid e $targetUserId');
-    } catch (e) {
-      print('❌ NETWORK CONNECT ERROR: $e');
+      AppLogger.info(
+        'Conexão criada com sucesso.',
+        name: 'NetworkService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao criar conexão.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // REMOVER CONEXÃO
+  // DISCONNECT FROM USER
+  // -------------------------------------------------------
+  // Remove uma conexão bidirecional entre o usuário logado
+  // e o usuário de destino.
   // =======================================================
   Future<void> disconnectFromUser(String targetUserId) async {
     final currentUid = _currentUid;
@@ -212,6 +261,7 @@ class NetworkService {
           .doc(currentUid);
 
       final batch = _firestore.batch();
+
       batch.delete(currentRef);
       batch.delete(targetRef);
 
@@ -222,15 +272,27 @@ class NetworkService {
         _syncConnectionsCount(targetUserId),
       ]);
 
-      print('✅ NETWORK: conexão removida entre $currentUid e $targetUserId');
-    } catch (e) {
-      print('❌ NETWORK DISCONNECT ERROR: $e');
+      AppLogger.info(
+        'Conexão removida com sucesso.',
+        name: 'NetworkService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao remover conexão.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // VERIFICAR SE JÁ ESTÁ CONECTADO
+  // IS CONNECTED WITH
+  // -------------------------------------------------------
+  // Verifica se o usuário logado já está conectado com o
+  // usuário informado.
   // =======================================================
   Future<bool> isConnectedWith(String targetUserId) async {
     final currentUid = _currentUid;
@@ -247,16 +309,26 @@ class NetworkService {
           .get();
 
       return doc.exists;
-    } catch (e) {
-      print('❌ NETWORK CHECK CONNECTION ERROR: $e');
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao verificar status de conexão.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // LISTAR CONEXÕES
+  // GET CONNECTIONS
   // -------------------------------------------------------
-  // Se userId não for informado, usa o usuário logado
+  // Lista conexões de um usuário.
+  //
+  // Se userId não for informado, usa o usuário logado.
+  // Busca primeiro em public_profiles e usa profiles como
+  // fallback quando necessário.
   // =======================================================
   Future<List<NetworkDiscoverProfileModel>> getConnections({
     String? userId,
@@ -274,6 +346,11 @@ class NetworkService {
           .get();
 
       if (snapshot.docs.isEmpty) {
+        AppLogger.debug(
+          'Nenhuma conexão encontrada.',
+          name: 'NetworkService',
+        );
+
         return [];
       }
 
@@ -290,9 +367,11 @@ class NetworkService {
 
         if (publicDoc.exists && publicDoc.data() != null) {
           final data = publicDoc.data()!;
+
           profiles.add(
             NetworkDiscoverProfileModel.fromMap(publicDoc.id, data),
           );
+
           continue;
         }
 
@@ -305,19 +384,30 @@ class NetworkService {
         }
       }
 
+      AppLogger.info(
+        'Conexões carregadas com sucesso: ${profiles.length}.',
+        name: 'NetworkService',
+      );
+
       return profiles;
-    } catch (e) {
-      print('❌ NETWORK GET CONNECTIONS ERROR: $e');
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao listar conexões.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // SINCRONIZAR CONTADOR
+  // SYNC CONNECTIONS COUNT
   // -------------------------------------------------------
-  // Atualiza:
-  // profiles/{uid}.user.connections
-  // public_profiles/{uid}.connections
+  // Sincroniza o total de conexões nas coleções:
+  // - profiles/{uid}.user.connections
+  // - public_profiles/{uid}.connections
   // =======================================================
   Future<void> _syncConnectionsCount(String userId) async {
     try {
@@ -340,15 +430,27 @@ class NetworkService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      print('✅ NETWORK: contador sincronizado para $userId = $total');
-    } catch (e) {
-      print('❌ NETWORK SYNC COUNT ERROR: $e');
+      AppLogger.debug(
+        'Contador de conexões sincronizado.',
+        name: 'NetworkService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao sincronizar contador de conexões.',
+        error: e,
+        stackTrace: st,
+        name: 'NetworkService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
-  // IDS JÁ CONECTADOS
+  // GET CONNECTED USER IDS
+  // -------------------------------------------------------
+  // Retorna os ids dos usuários já conectados.
+  // Usado para remover conexões existentes da tela Explorar.
   // =======================================================
   Future<Set<String>> _getConnectedUserIds(String userId) async {
     final snapshot = await _firestore
@@ -364,7 +466,10 @@ class NetworkService {
   }
 
   // =======================================================
-  // FALLBACK -> PROFILE PARA DISCOVER MODEL
+  // MAP PROFILE DOC TO DISCOVER MODEL
+  // -------------------------------------------------------
+  // Converte um documento de profiles para o modelo usado
+  // na tela de networking.
   // =======================================================
   NetworkDiscoverProfileModel _mapProfileDocToDiscoverModel(
     DocumentSnapshot<Map<String, dynamic>> doc,
@@ -389,7 +494,9 @@ class NetworkService {
   }
 
   // =======================================================
-  // HELPERS
+  // BUILD TAGS
+  // -------------------------------------------------------
+  // Gera tags simples a partir do cargo/especialidade.
   // =======================================================
   List<String> _buildTags(String role) {
     final normalized = role.toLowerCase();
@@ -420,6 +527,11 @@ class NetworkService {
     return tags.toList();
   }
 
+  // =======================================================
+  // IS RECRUITER
+  // -------------------------------------------------------
+  // Identifica perfis com indicação textual de recrutador/RH.
+  // =======================================================
   bool _isRecruiter(String role) {
     final normalized = role.toLowerCase();
 

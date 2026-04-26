@@ -1,23 +1,33 @@
 // =======================================================
 // PROFILE SERVICE
 // -------------------------------------------------------
-// Backend real com Firebase (MULTIUSER CORRETO)
-// + sync de perfil público para tela de networking
-// + busca de perfil por id para tela pública
+// Backend real com Firebase.
+//
+// Responsabilidades:
+// - buscar perfil do usuário logado
+// - buscar perfil público por id
+// - criar perfil inicial
+// - atualizar perfil privado
+// - sincronizar dados públicos para networking
+//
+// Observação:
+// - não usar print() direto aqui
+// - não logar payload completo do perfil
 // =======================================================
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../models/profile_model.dart';
-import '../models/user_model.dart';
-import '../models/resume_model.dart';
+import '../../../core/utils/app_logger.dart';
+import '../models/education_model.dart';
+import '../models/experience_model.dart';
 import '../models/language_model.dart';
+import '../models/profile_model.dart';
+import '../models/resume_model.dart';
+import '../models/social_link_model.dart';
 import '../models/soft_skill_model.dart';
 import '../models/tech_skill_model.dart';
-import '../models/experience_model.dart';
-import '../models/education_model.dart';
-import '../models/social_link_model.dart';
+import '../models/user_model.dart';
 
 class ProfileService {
   final _firestore = FirebaseFirestore.instance;
@@ -25,17 +35,23 @@ class ProfileService {
 
   // =======================================================
   // GET UID
+  // -------------------------------------------------------
+  // Recupera o uid do usuário autenticado.
   // =======================================================
   String get _uid {
     final user = _auth.currentUser;
+
     if (user == null) {
       throw Exception('Usuário não autenticado');
     }
+
     return user.uid;
   }
 
   // =======================================================
-  // GET PROFILE (USUÁRIO LOGADO)
+  // GET PROFILE
+  // -------------------------------------------------------
+  // Busca o perfil privado do usuário logado.
   // =======================================================
   Future<ProfileModel> getProfile() async {
     try {
@@ -45,19 +61,28 @@ class ProfileService {
         throw Exception('Perfil não encontrado');
       }
 
-      final data = doc.data()!;
+      AppLogger.debug(
+        'Perfil privado carregado com sucesso.',
+        name: 'ProfileService',
+      );
 
-      print('🔥 FIREBASE PROFILE: $data');
+      return _mapProfile(doc.data()!);
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao buscar perfil privado.',
+        error: e,
+        stackTrace: st,
+        name: 'ProfileService',
+      );
 
-      return _mapProfile(data);
-    } catch (e) {
-      print('❌ ERRO AO BUSCAR PROFILE: $e');
       rethrow;
     }
   }
 
   // =======================================================
-  // GET PROFILE BY ID (PERFIL PÚBLICO / OUTRO USUÁRIO)
+  // GET PROFILE BY ID
+  // -------------------------------------------------------
+  // Busca o perfil público/completo de outro usuário pelo id.
   // =======================================================
   Future<ProfileModel> getProfileById(String userId) async {
     try {
@@ -67,29 +92,49 @@ class ProfileService {
         throw Exception('Perfil público não encontrado');
       }
 
-      final data = doc.data()!;
+      AppLogger.debug(
+        'Perfil público carregado com sucesso.',
+        name: 'ProfileService',
+      );
 
-      print('🔥 FIREBASE PUBLIC PROFILE [$userId]: $data');
+      return _mapProfile(doc.data()!);
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao buscar perfil por id.',
+        error: e,
+        stackTrace: st,
+        name: 'ProfileService',
+      );
 
-      return _mapProfile(data);
-    } catch (e) {
-      print('❌ ERRO AO BUSCAR PROFILE POR ID: $e');
       rethrow;
     }
   }
 
   // =======================================================
   // CREATE PROFILE
+  // -------------------------------------------------------
+  // Cria o documento inicial do perfil caso ele ainda não
+  // exista para o usuário autenticado.
   // =======================================================
   Future<void> createProfile() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
+
+      if (user == null) {
+        throw Exception('Usuário não autenticado');
+      }
 
       final docRef = _firestore.collection('profiles').doc(user.uid);
       final exists = await docRef.get();
 
-      if (exists.exists) return;
+      if (exists.exists) {
+        AppLogger.debug(
+          'Perfil já existente. Criação ignorada.',
+          name: 'ProfileService',
+        );
+
+        return;
+      }
 
       await docRef.set({
         'user': {
@@ -116,15 +161,26 @@ class ProfileService {
         'links': [],
       });
 
-      print('✅ PROFILE CRIADO!');
-    } catch (e) {
-      print('❌ ERRO AO CRIAR PROFILE: $e');
+      AppLogger.info(
+        'Perfil inicial criado com sucesso.',
+        name: 'ProfileService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao criar perfil inicial.',
+        error: e,
+        stackTrace: st,
+        name: 'ProfileService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
   // UPDATE PROFILE
+  // -------------------------------------------------------
+  // Atualiza o perfil privado e sincroniza os dados públicos.
   // =======================================================
   Future<void> updateProfile(ProfileModel profile) async {
     try {
@@ -146,9 +202,18 @@ class ProfileService {
 
       await syncPublicProfile(profile);
 
-      print('✅ PROFILE ATUALIZADO!');
-    } catch (e) {
-      print('❌ ERRO AO ATUALIZAR PROFILE: $e');
+      AppLogger.info(
+        'Perfil atualizado com sucesso.',
+        name: 'ProfileService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao atualizar perfil.',
+        error: e,
+        stackTrace: st,
+        name: 'ProfileService',
+      );
+
       rethrow;
     }
   }
@@ -156,7 +221,8 @@ class ProfileService {
   // =======================================================
   // SYNC PUBLIC PROFILE
   // -------------------------------------------------------
-  // Espelha apenas os dados públicos para a rede
+  // Espelha apenas dados públicos para a coleção usada na
+  // tela de networking.
   // =======================================================
   Future<void> syncPublicProfile(ProfileModel profile) async {
     try {
@@ -184,15 +250,26 @@ class ProfileService {
           .doc(_uid)
           .set(publicData, SetOptions(merge: true));
 
-      print('✅ PUBLIC PROFILE SINCRONIZADO!');
-    } catch (e) {
-      print('❌ ERRO AO SINCRONIZAR PUBLIC PROFILE: $e');
+      AppLogger.info(
+        'Perfil público sincronizado com sucesso.',
+        name: 'ProfileService',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Erro ao sincronizar perfil público.',
+        error: e,
+        stackTrace: st,
+        name: 'ProfileService',
+      );
+
       rethrow;
     }
   }
 
   // =======================================================
   // MAP PROFILE
+  // -------------------------------------------------------
+  // Converte o Map vindo do Firestore para ProfileModel.
   // =======================================================
   ProfileModel _mapProfile(Map<String, dynamic> data) {
     return ProfileModel(
@@ -236,7 +313,9 @@ class ProfileService {
   }
 
   // =======================================================
-  // HELPERS
+  // BUILD PUBLIC TAGS
+  // -------------------------------------------------------
+  // Gera tags simples para melhorar filtros/busca na rede.
   // =======================================================
   List<String> _buildPublicTags(ProfileModel profile) {
     final role = profile.user.role.toLowerCase();
@@ -267,6 +346,11 @@ class ProfileService {
     return tags.toList();
   }
 
+  // =======================================================
+  // BUILD SEARCHABLE TEXT
+  // -------------------------------------------------------
+  // Monta texto normalizado usado para busca/filtro.
+  // =======================================================
   String _buildSearchableText(
     ProfileModel profile,
     List<String> tags,
@@ -286,6 +370,11 @@ class ProfileService {
         .toLowerCase();
   }
 
+  // =======================================================
+  // IS RECRUITER
+  // -------------------------------------------------------
+  // Identifica perfis com indicação textual de recrutador/RH.
+  // =======================================================
   bool _isRecruiter(String role) {
     final normalized = role.toLowerCase();
 
