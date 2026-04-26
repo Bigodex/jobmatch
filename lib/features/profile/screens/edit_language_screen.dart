@@ -172,7 +172,15 @@ class _EditLanguageScreenState extends ConsumerState<EditLanguageScreen> {
         isSaving = true;
       });
 
-      await ref.read(profileProvider.notifier).updateLanguages(_edited);
+      await ref
+          .read(profileProvider.notifier)
+          .updateLanguages(_edited)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw Exception('Tempo limite ao salvar.');
+            },
+          );
 
       if (!mounted) return;
 

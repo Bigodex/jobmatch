@@ -160,6 +160,134 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
     }
   }
 
+
+
+  // ===================================================
+  // ESPECIALIDADES DISPONÍVEIS
+  // ---------------------------------------------------
+  // Mesmo padrão usado no onboarding: o usuário não digita
+  // livremente a especialidade, ele seleciona uma opção.
+  // ===================================================
+  List<String> get _specialties => const [
+        'UI/UX Designer',
+        'Frontend Developer',
+        'Backend Developer',
+        'QA Engineer',
+        'Product Manager',
+        'Data Analyst',
+        'Mobile Developer',
+        'DevOps Engineer',
+      ];
+
+  // ===================================================
+  // MODAL DE ESPECIALIDADE
+  // ---------------------------------------------------
+  // Abre um bottom sheet visual, com ícone + texto, para
+  // manter a edição do perfil alinhada ao onboarding.
+  // ===================================================
+  Future<void> _openSpecialtySelector() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (modalContext) {
+        final theme = Theme.of(modalContext);
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 18),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1C1C22),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(26),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.22),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const Text(
+                  'Especialidade',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _specialties.length,
+                    separatorBuilder: (_, index) => Divider(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                    itemBuilder: (context, index) {
+                      final specialty = _specialties[index];
+                      final isSelected = roleController.text.trim() == specialty;
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
+                        leading: SvgPicture.asset(
+                          _getRoleIcon(specialty),
+                          width: 20,
+                          height: 20,
+                          colorFilter: ColorFilter.mode(
+                            isSelected
+                                ? theme.colorScheme.primary
+                                : Colors.white.withOpacity(0.86),
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        title: Text(
+                          specialty,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: isSelected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              )
+                            : null,
+                        onTap: () => Navigator.pop(context, specialty),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+
+    setState(() {
+      roleController.text = selected;
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -276,36 +404,10 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: roleController,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Cargo',
-                        hintText: 'Ex: Desenvolvedor Flutter',
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 12,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.04),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
+                    _SpecialtySelectorField(
+                      value: roleController.text,
+                      iconPath: _getRoleIcon(roleController.text),
+                      onTap: _openSpecialtySelector,
                     ),
                   ],
                 )
@@ -401,7 +503,7 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                 : isEditing
                     ? theme.colorScheme.primary
                     : null,
-            onPressed: () {
+            onPressed: () async {
               if (widget.isPublic) {
                 widget.onConnect?.call();
                 return;
@@ -416,10 +518,31 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
                   return;
                 }
 
-                ref.read(profileProvider.notifier).updateUserInfo(
-                  name: nameController.text,
-                  role: roleController.text,
-                );
+                try {
+                  await ref
+                      .read(profileProvider.notifier)
+                      .updateUserInfo(
+                        name: nameController.text,
+                        role: roleController.text,
+                      )
+                      .timeout(
+                        const Duration(seconds: 8),
+                        onTimeout: () {
+                          throw Exception('Tempo limite ao salvar.');
+                        },
+                      );
+                } catch (_) {
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Não foi possível salvar seus dados. Verifique sua conexão e tente novamente.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
               }
 
               setState(() {
@@ -428,6 +551,84 @@ class _ProfileHeaderState extends ConsumerState<ProfileHeader> {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+// =======================================================
+// SPECIALTY SELECTOR FIELD
+// -------------------------------------------------------
+// Campo visual de seleção usado no modo de edição do header.
+// Evita digitação livre e mantém o mesmo padrão do onboarding.
+// =======================================================
+class _SpecialtySelectorField extends StatelessWidget {
+  final String value;
+  final String iconPath;
+  final VoidCallback onTap;
+
+  const _SpecialtySelectorField({
+    required this.value,
+    required this.iconPath,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasValue = value.trim().isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 12,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          child: Row(
+            children: [
+              SvgPicture.asset(
+                iconPath,
+                width: 18,
+                height: 18,
+                colorFilter: ColorFilter.mode(
+                  theme.colorScheme.primary,
+                  BlendMode.srcIn,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasValue ? value : 'Selecione sua especialidade',
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: hasValue ? Colors.white : Colors.white54,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                Icons.expand_more_rounded,
+                size: 22,
+                color: Colors.white.withOpacity(0.72),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

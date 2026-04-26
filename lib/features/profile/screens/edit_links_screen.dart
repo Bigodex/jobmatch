@@ -397,7 +397,15 @@ class _EditLinksScreenState
         _isSaving = true;
       });
 
-      await ref.read(profileProvider.notifier).updateLinks(filledLinks);
+      await ref
+          .read(profileProvider.notifier)
+          .updateLinks(filledLinks)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw Exception('Tempo limite ao salvar.');
+            },
+          );
 
       if (!mounted) return;
 

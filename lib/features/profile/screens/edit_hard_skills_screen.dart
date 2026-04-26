@@ -489,7 +489,15 @@ class _EditHardSkillsScreenState
         _isSaving = true;
       });
 
-      await ref.read(profileProvider.notifier).updateHardSkills(updated);
+      await ref
+          .read(profileProvider.notifier)
+          .updateHardSkills(updated)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw Exception('Tempo limite ao salvar.');
+            },
+          );
 
       if (!mounted) return;
 

@@ -793,7 +793,15 @@ class _EditEducationScreenState
         _isSaving = true;
       });
 
-      await ref.read(profileProvider.notifier).updateEducations(validEducations);
+      await ref
+          .read(profileProvider.notifier)
+          .updateEducations(validEducations)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw Exception('Tempo limite ao salvar.');
+            },
+          );
 
       if (!mounted) return;
 

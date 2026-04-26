@@ -407,7 +407,15 @@ class _EditSoftSkillsScreenState
         _isSaving = true;
       });
 
-      await ref.read(profileProvider.notifier).updateSoftSkills(updated);
+      await ref
+          .read(profileProvider.notifier)
+          .updateSoftSkills(updated)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              throw Exception('Tempo limite ao salvar.');
+            },
+          );
 
       if (!mounted) return;
 
