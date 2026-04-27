@@ -267,6 +267,7 @@ class _StepCompanyHeaderState extends ConsumerState<StepCompanyHeader> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 24),
           AppSectionCard(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),

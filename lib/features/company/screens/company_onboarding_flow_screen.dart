@@ -4,7 +4,7 @@
 // Fluxo de cadastro da página empresarial
 // - reaproveita header de progresso
 // - reaproveita Jobu
-// - step de vagas é condicional
+// - mantém posicionamento igual ao onboarding de usuário
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -14,13 +14,14 @@ import 'package:go_router/go_router.dart';
 import 'package:jobmatch/features/company/providers/company_onboarding_provider.dart';
 import 'package:jobmatch/features/company/widgets/company_onboarding_step.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_about.dart';
+import 'package:jobmatch/features/company/widgets/steps/step_company_checklist.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_header.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_hiring.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_identity.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_jobs.dart';
+import 'package:jobmatch/features/company/widgets/steps/step_company_team.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_header.dart';
 import 'package:jobmatch/features/onboarding/widgets/onboarding_jobu_tuto.dart';
-import 'package:jobmatch/shared/widgets/app_section_card.dart';
 
 class CompanyOnboardingFlowScreen extends ConsumerStatefulWidget {
   const CompanyOnboardingFlowScreen({super.key});
@@ -32,19 +33,9 @@ class CompanyOnboardingFlowScreen extends ConsumerStatefulWidget {
 
 class _CompanyOnboardingFlowScreenState
     extends ConsumerState<CompanyOnboardingFlowScreen> {
-  // ===================================================
-  // STEP ATUAL
-  // ===================================================
   CompanyOnboardingStep _currentStep = CompanyOnboardingStep.header;
-
-  // ===================================================
-  // JOBU MESSAGE
-  // ===================================================
   String? _jobuMessage;
 
-  // ===================================================
-  // DEFINE STEP
-  // ===================================================
   void _setStep(CompanyOnboardingStep step) {
     setState(() {
       _currentStep = step;
@@ -52,14 +43,8 @@ class _CompanyOnboardingFlowScreenState
     });
   }
 
-  // ===================================================
-  // LISTA DE STEPS ATIVOS
-  // ---------------------------------------------------
-  // Remove o step de vagas quando a empresa não está
-  // contratando
-  // ===================================================
   List<CompanyOnboardingStep> _getActiveSteps(CompanyOnboardingState company) {
-    final steps = <CompanyOnboardingStep>[
+    return <CompanyOnboardingStep>[
       CompanyOnboardingStep.header,
       CompanyOnboardingStep.identity,
       CompanyOnboardingStep.about,
@@ -68,31 +53,19 @@ class _CompanyOnboardingFlowScreenState
       CompanyOnboardingStep.team,
       CompanyOnboardingStep.checklist,
     ];
-
-    return steps;
   }
 
-  // ===================================================
-  // ÍNDICE DA BARRA
-  // ===================================================
   int _getProgressCurrentStep(CompanyOnboardingState company) {
     final steps = _getActiveSteps(company);
     final index = steps.indexOf(_currentStep);
-
     if (index == -1) return 0;
     return index;
   }
 
-  // ===================================================
-  // TOTAL DA BARRA
-  // ===================================================
   int _getProgressTotalSteps(CompanyOnboardingState company) {
     return _getActiveSteps(company).length;
   }
 
-  // ===================================================
-  // PRÓXIMO STEP
-  // ===================================================
   void _nextStep() {
     final company = ref.read(companyOnboardingProvider);
     final steps = _getActiveSteps(company);
@@ -104,17 +77,11 @@ class _CompanyOnboardingFlowScreenState
     }
 
     final nextIndex = currentIndex + 1;
-
-    if (nextIndex >= steps.length) {
-      return;
-    }
+    if (nextIndex >= steps.length) return;
 
     _setStep(steps[nextIndex]);
   }
 
-  // ===================================================
-  // STEP ANTERIOR
-  // ===================================================
   void _prevStep() {
     final company = ref.read(companyOnboardingProvider);
     final steps = _getActiveSteps(company);
@@ -128,16 +95,33 @@ class _CompanyOnboardingFlowScreenState
     _setStep(steps[currentIndex - 1]);
   }
 
-  // ===================================================
-  // CONTINUE DOS STEPS
-  // ===================================================
   void _handleStepComplete() {
     _nextStep();
   }
 
-  // ===================================================
-  // TEXTO PADRÃO DO JOBU
-  // ===================================================
+  void _handleChecklistEdit(String stepKey) {
+    switch (stepKey) {
+      case 'header':
+        _setStep(CompanyOnboardingStep.header);
+        return;
+      case 'identity':
+        _setStep(CompanyOnboardingStep.identity);
+        return;
+      case 'about':
+        _setStep(CompanyOnboardingStep.about);
+        return;
+      case 'hiring':
+        _setStep(CompanyOnboardingStep.hiring);
+        return;
+      case 'jobs':
+        _setStep(CompanyOnboardingStep.jobs);
+        return;
+      case 'team':
+        _setStep(CompanyOnboardingStep.team);
+        return;
+    }
+  }
+
   String _getJobuText() {
     if (_jobuMessage != null && _jobuMessage!.trim().isNotEmpty) {
       return _jobuMessage!;
@@ -146,22 +130,16 @@ class _CompanyOnboardingFlowScreenState
     switch (_currentStep) {
       case CompanyOnboardingStep.header:
         return 'Vamos montar a página da sua empresa?';
-
       case CompanyOnboardingStep.identity:
         return 'Agora preciso dos dados da empresa.';
-
       case CompanyOnboardingStep.about:
         return 'Agora quero conhecer melhor a empresa.';
-
       case CompanyOnboardingStep.hiring:
         return 'Sua empresa está contratando agora?';
-
       case CompanyOnboardingStep.jobs:
         return 'Show! Bora cadastrar pelo menos uma vaga.';
-
       case CompanyOnboardingStep.team:
         return 'Quantas pessoas trabalham aí hoje?';
-
       case CompanyOnboardingStep.checklist:
         return 'Confere tudo antes de finalizar a página.';
     }
@@ -171,16 +149,15 @@ class _CompanyOnboardingFlowScreenState
   Widget build(BuildContext context) {
     final company = ref.watch(companyOnboardingProvider);
 
-    final progressCurrentStep = _getProgressCurrentStep(company);
-    final progressTotalSteps = _getProgressTotalSteps(company);
-
     return Scaffold(
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
+            const SizedBox(height: 8),
             OnboardingHeader(
-              currentStep: progressCurrentStep,
-              totalSteps: progressTotalSteps,
+              currentStep: _getProgressCurrentStep(company),
+              totalSteps: _getProgressTotalSteps(company),
               onBack: _prevStep,
             ),
             JobuTuto(
@@ -191,9 +168,17 @@ class _CompanyOnboardingFlowScreenState
                 duration: const Duration(milliseconds: 250),
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
-                child: SingleChildScrollView(
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
+                child: KeyedSubtree(
                   key: ValueKey(_currentStep.name),
-                  padding: const EdgeInsets.only(bottom: 24),
                   child: _buildStep(),
                 ),
               ),
@@ -204,268 +189,49 @@ class _CompanyOnboardingFlowScreenState
     );
   }
 
-  // ===================================================
-  // BUILD STEP
-  // ===================================================
   Widget _buildStep() {
     switch (_currentStep) {
       case CompanyOnboardingStep.header:
         return StepCompanyHeader(
           onNext: _handleStepComplete,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.identity:
         return StepCompanyIdentity(
           onNext: _handleStepComplete,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.about:
         return StepCompanyAbout(
           onNext: _handleStepComplete,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.hiring:
         return StepCompanyHiring(
           onNext: _handleStepComplete,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.jobs:
         return StepCompanyJobs(
           onNext: _handleStepComplete,
-          onJobuMessageChange: (msg) {
-            setState(() {
-              _jobuMessage = msg;
-            });
-          },
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.team:
-        return _CompanyPlaceholderStep(
-          title: 'Colaboradores',
-          subtitle: 'Quantidade e porte empresarial',
-          description:
-              'Aqui vamos calcular automaticamente o porte da empresa com base na quantidade de colaboradores.',
-          primaryLabel: 'Continuar',
-          onPrimaryTap: _handleStepComplete,
+        return StepCompanyTeam(
+          onNext: _handleStepComplete,
+          onJobuMessageChange: (msg) => setState(() => _jobuMessage = msg),
         );
-
       case CompanyOnboardingStep.checklist:
-        return _CompanyChecklistPlaceholderStep(
+        return StepCompanyChecklist(
+          onEditStep: _handleChecklistEdit,
           onFinish: () {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text(
-                  'Fluxo empresarial estruturado. Agora seguimos para os steps reais.',
-                ),
+                content: Text('Página empresarial finalizada.'),
               ),
             );
           },
         );
     }
-  }
-}
-
-// =======================================================
-// PLACEHOLDER STEP BASE
-// -------------------------------------------------------
-// Temporário para o fluxo já existir sem quebrar enquanto
-// os steps reais ainda não foram criados
-// =======================================================
-class _CompanyPlaceholderStep extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String description;
-  final String primaryLabel;
-  final VoidCallback onPrimaryTap;
-
-  const _CompanyPlaceholderStep({
-    required this.title,
-    required this.subtitle,
-    required this.description,
-    required this.primaryLabel,
-    required this.onPrimaryTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppSectionCard(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              description,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onPrimaryTap,
-                child: Text(primaryLabel),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =======================================================
-// PLACEHOLDER CHECKLIST STEP
-// =======================================================
-class _CompanyChecklistPlaceholderStep extends ConsumerWidget {
-  final VoidCallback onFinish;
-
-  const _CompanyChecklistPlaceholderStep({
-    required this.onFinish,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final company = ref.watch(companyOnboardingProvider);
-
-    return AppSectionCard(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Checklist',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _ChecklistLine(
-              label: 'Header',
-              value: company.hasHeaderContent
-                  ? 'Preenchido'
-                  : 'Opcional / vazio',
-            ),
-            _ChecklistLine(
-              label: 'Identidade',
-              value: company.hasIdentityData ? 'Preenchido' : 'Pendente',
-            ),
-            _ChecklistLine(
-              label: 'Sobre',
-              value: company.hasAboutData ? 'Preenchido' : 'Pendente',
-            ),
-            _ChecklistLine(
-              label: 'Contratação',
-              value: company.isHiring
-                  ? 'Empresa informou que está contratando'
-                  : 'Empresa não informou vagas no momento',
-            ),
-            _ChecklistLine(
-              label: 'Vagas',
-              value: company.isHiring
-                  ? '${company.jobs.length} cadastrada(s)'
-                  : 'Step ignorado',
-            ),
-            _ChecklistLine(
-              label: 'Colaboradores',
-              value: company.hasTeamData ? 'Preenchido' : 'Pendente',
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: onFinish,
-                child: const Text('Finalizar depois'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// =======================================================
-// CHECKLIST LINE
-// =======================================================
-class _ChecklistLine extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ChecklistLine({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white70,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

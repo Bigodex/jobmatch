@@ -100,6 +100,20 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     return null;
   }
 
+  static String _iconForLevel(String value) {
+    for (final item in _levels) {
+      if (item.label == value) return item.icon;
+    }
+    return AppIcons.three;
+  }
+
+  static String _iconForWorkMode(String value) {
+    for (final item in _workModes) {
+      if (item.label == value) return item.icon;
+    }
+    return AppIcons.model;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +121,27 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
     _salaryController = TextEditingController();
+
+    final company = ref.read(companyOnboardingProvider);
+    _jobs.addAll(
+      company.jobs.map((job) {
+        final locationParts = job.location.split(' - ');
+        final city = locationParts.isNotEmpty ? locationParts.first : '';
+        final uf = locationParts.length > 1 ? locationParts.last : '';
+
+        return {
+          'title': job.title,
+          'description': job.description,
+          'level': job.seniority,
+          'levelIcon': _iconForLevel(job.seniority),
+          'workMode': job.workModel,
+          'workModeIcon': _iconForWorkMode(job.workModel),
+          'uf': uf,
+          'city': city,
+          'salary': job.salary,
+        };
+      }),
+    );
 
     Future.microtask(() async {
       await ref.read(onboardingProvider.notifier).loadStates();
@@ -265,7 +300,22 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
   }
 
   void _persistJobs() {
-    // ligar no provider/model depois
+    final drafts = _jobs.map((job) {
+      final city = (job['city'] ?? '').trim();
+      final uf = (job['uf'] ?? '').trim();
+      final location = city.isEmpty && uf.isEmpty ? '' : '${city} - ${uf}';
+
+      return CompanyJobDraft(
+        title: (job['title'] ?? '').trim(),
+        seniority: (job['level'] ?? '').trim(),
+        workModel: (job['workMode'] ?? '').trim(),
+        location: location,
+        salary: (job['salary'] ?? '').trim(),
+        description: (job['description'] ?? '').trim(),
+      );
+    }).toList();
+
+    ref.read(companyOnboardingProvider.notifier).setJobs(drafts);
   }
 
   Future<void> _handleContinue() async {
@@ -646,6 +696,7 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 30),
             AppSectionCard(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),

@@ -417,6 +417,7 @@ class _StepCompanyIdentityState extends ConsumerState<StepCompanyIdentity> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 24),
             AppSectionCard(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),

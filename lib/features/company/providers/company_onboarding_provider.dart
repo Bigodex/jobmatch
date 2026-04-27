@@ -195,8 +195,7 @@ class CompanyOnboardingState {
   }
 
   bool get hasAboutData {
-    return (sector?.trim().isNotEmpty ?? false) &&
-        (companyType?.trim().isNotEmpty ?? false) &&
+    return (companyType?.trim().isNotEmpty ?? false) &&
         (description?.trim().isNotEmpty ?? false);
   }
 

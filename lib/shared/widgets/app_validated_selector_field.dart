@@ -102,7 +102,7 @@ class AppValidatedSelectorField extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               _buildActionIcon(),
-              ?validationIcon,
+              if (validationIcon != null) validationIcon,
             ],
           ),
         ),

@@ -105,6 +105,7 @@ class _StepCompanyHiringState extends ConsumerState<StepCompanyHiring> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 30),
             AppSectionCard(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
