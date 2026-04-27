@@ -1,9 +1,8 @@
 // =======================================================
 // STEP COMPANY CHECKLIST
 // -------------------------------------------------------
-// Checklist final do onboarding empresarial
-// - mesmo padrão visual do checklist do onboarding usuário
-// - seções com status, itens internos e botão de edição
+// Revisão do cadastro empresarial no mesmo estilo visual
+// do checklist do onboarding de usuários.
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -16,13 +15,13 @@ import 'package:jobmatch/features/company/providers/company_onboarding_provider.
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
 
 class StepCompanyChecklist extends ConsumerWidget {
-  final VoidCallback onFinish;
   final void Function(String stepKey) onEditStep;
+  final VoidCallback onFinish;
 
   const StepCompanyChecklist({
     super.key,
-    required this.onFinish,
     required this.onEditStep,
+    required this.onFinish,
   });
 
   @override
@@ -30,91 +29,60 @@ class StepCompanyChecklist extends ConsumerWidget {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final company = ref.watch(companyOnboardingProvider);
 
-    final hasCover = (company.coverUrl ?? '').trim().isNotEmpty;
-    final hasLogo = (company.logoUrl ?? '').trim().isNotEmpty;
-    final hasSlogan = (company.slogan ?? '').trim().isNotEmpty;
-    final hasWebsite = (company.website ?? '').trim().isNotEmpty;
-    final hasJobs = !company.isHiring || company.jobs.isNotEmpty;
-
     final sections = [
       _ChecklistSectionData(
-        title: 'Header',
-        icon: AppIcons.image,
-        stepKey: 'header',
-        completed: true,
-        items: [
-          _ChecklistLineData(
-            title: 'Capa',
-            subtitle: hasCover ? 'Adicionada' : 'Opcional / vazia',
-            completed: true,
-            icon: AppIcons.image,
-          ),
-          _ChecklistLineData(
-            title: 'Logo',
-            subtitle: hasLogo ? 'Adicionada' : 'Opcional / vazia',
-            completed: true,
-            icon: AppIcons.buildingfull,
-          ),
-        ],
-      ),
-      _ChecklistSectionData(
-        title: 'Identificação da Empresa',
-        icon: AppIcons.buildingfull,
+        title: 'Identidade',
+        icon: AppIcons.id,
         stepKey: 'identity',
         completed: company.hasIdentityData,
         items: [
           _ChecklistLineData(
-            title: 'Nome da Empresa',
-            subtitle: _valueOrPending(company.companyName),
-            completed: (company.companyName ?? '').trim().isNotEmpty,
-            icon: AppIcons.skyscraper,
+            title: 'Nome da empresa',
+            subtitle: _filledOrPending(company.companyName),
+            completed: _hasText(company.companyName),
+            icon: AppIcons.buildingfull,
           ),
           _ChecklistLineData(
-            title: 'Setor da Empresa',
-            subtitle: _valueOrPending(company.companyCategory),
-            completed: (company.companyCategory ?? '').trim().isNotEmpty,
+            title: 'Categoria',
+            subtitle: _filledOrPending(company.companyCategory),
+            completed: _hasText(company.companyCategory),
             icon: AppIcons.nodes,
           ),
           _ChecklistLineData(
             title: 'CNPJ',
-            subtitle: _valueOrPending(company.cnpj),
-            completed: (company.cnpj ?? '').trim().isNotEmpty,
-            icon: AppIcons.government,
+            subtitle: _filledOrPending(company.cnpj),
+            completed: _hasText(company.cnpj),
+            icon: AppIcons.id2,
           ),
         ],
       ),
       _ChecklistSectionData(
-        title: 'Sobre',
-        icon: AppIcons.info,
+        title: 'Sobre a empresa',
+        icon: AppIcons.infofull,
         stepKey: 'about',
         completed: company.hasAboutData,
         items: [
           _ChecklistLineData(
-            title: 'Tipo da Empresa',
-            subtitle: _valueOrPending(company.companyType),
-            completed: (company.companyType ?? '').trim().isNotEmpty,
-            icon: AppIcons.buildingfull,
+            title: 'Tipo da empresa',
+            subtitle: _filledOrPending(company.companyType),
+            completed: _hasText(company.companyType),
+            icon: AppIcons.buildingbriefcase,
           ),
           _ChecklistLineData(
             title: 'Descrição',
-            subtitle: (company.description ?? '').trim().isNotEmpty
+            subtitle: _hasText(company.description)
                 ? _truncate(company.description!, 90)
                 : 'Não preenchido',
-            completed: (company.description ?? '').trim().isNotEmpty,
-            icon: AppIcons.info,
+            completed: _hasText(company.description),
+            icon: AppIcons.resume,
           ),
-          _ChecklistLineData(
-            title: 'Slogan',
-            subtitle: hasSlogan ? company.slogan!.trim() : 'Opcional / vazio',
-            completed: true,
-            icon: AppIcons.ray,
-          ),
-          _ChecklistLineData(
-            title: 'Site',
-            subtitle: hasWebsite ? company.website!.trim() : 'Opcional / vazio',
-            completed: true,
-            icon: AppIcons.links,
-          ),
+          if (_hasText(company.website))
+            _ChecklistLineData(
+              title: 'Site',
+              subtitle: company.website,
+              completed: true,
+              icon: AppIcons.links,
+            ),
         ],
       ),
       _ChecklistSectionData(
@@ -124,65 +92,49 @@ class StepCompanyChecklist extends ConsumerWidget {
         completed: true,
         items: [
           _ChecklistLineData(
-            title: 'Status',
+            title: 'Status de contratação',
             subtitle: company.isHiring
-                ? 'Empresa está contratando'
-                : 'Sem vagas no momento',
+                ? 'Empresa está contratando agora'
+                : 'Empresa não está contratando agora',
             completed: true,
-            icon: AppIcons.briefcase,
+            icon: company.isHiring ? AppIcons.verify : AppIcons.info,
           ),
         ],
       ),
-      _ChecklistSectionData(
-        title: 'Vagas',
-        icon: AppIcons.briefcase,
-        stepKey: 'jobs',
-        completed: hasJobs,
-        items: company.isHiring
-            ? company.jobs.isNotEmpty
-                ? company.jobs.take(3).map((job) {
-                    final subtitleParts = <String>[];
-                    if (job.seniority.trim().isNotEmpty) {
-                      subtitleParts.add(job.seniority.trim());
-                    }
-                    if (job.workModel.trim().isNotEmpty) {
-                      subtitleParts.add(job.workModel.trim());
-                    }
-                    if (job.location.trim().isNotEmpty) {
-                      subtitleParts.add(job.location.trim());
-                    }
+      if (company.isHiring)
+        _ChecklistSectionData(
+          title: 'Vagas',
+          icon: AppIcons.bagmoney,
+          stepKey: 'jobs',
+          completed: company.jobs.isNotEmpty,
+          items: company.jobs.isNotEmpty
+              ? company.jobs.take(3).map((job) {
+                  final subtitleParts = <String>[
+                    if (job.seniority.trim().isNotEmpty) job.seniority,
+                    if (job.workModel.trim().isNotEmpty) job.workModel,
+                    if (job.location.trim().isNotEmpty) job.location,
+                  ];
 
-                    return _ChecklistLineData(
-                      title: job.title.trim().isNotEmpty
-                          ? job.title.trim()
-                          : 'Vaga',
-                      subtitle: subtitleParts.isNotEmpty
-                          ? subtitleParts.join(' • ')
-                          : null,
-                      completed: true,
-                      icon: AppIcons.briefcase,
-                    );
-                  }).toList()
-                : [
-                    _ChecklistLineData(
-                      title: 'Nenhuma vaga adicionada',
-                      subtitle: 'Adicione pelo menos uma vaga.',
-                      completed: false,
-                      icon: AppIcons.briefcase,
-                    ),
-                  ]
-            : [
-                _ChecklistLineData(
-                  title: 'Step ignorado',
-                  subtitle: 'A empresa não está contratando agora.',
-                  completed: true,
-                  icon: AppIcons.briefcase,
-                ),
-              ],
-        footerText: company.jobs.length > 3
-            ? '+${company.jobs.length - 3} vaga(s)'
-            : null,
-      ),
+                  return _ChecklistLineData(
+                    title: job.title.trim().isNotEmpty ? job.title : 'Vaga',
+                    subtitle: subtitleParts.isNotEmpty
+                        ? subtitleParts.join(' • ')
+                        : null,
+                    completed: true,
+                    icon: AppIcons.briefcase,
+                  );
+                }).toList()
+              : [
+                  _ChecklistLineData(
+                    title: 'Nenhuma vaga cadastrada',
+                    completed: false,
+                    icon: AppIcons.briefcase,
+                  ),
+                ],
+          footerText: company.jobs.length > 3
+              ? '+${company.jobs.length - 3} vaga(s) cadastrada(s)'
+              : null,
+        ),
       _ChecklistSectionData(
         title: 'Colaboradores',
         icon: AppIcons.group,
@@ -191,25 +143,53 @@ class StepCompanyChecklist extends ConsumerWidget {
         items: [
           _ChecklistLineData(
             title: 'Quantidade',
-            subtitle: company.employeesCount == null
-                ? 'Não preenchido'
-                : '${company.employeesCount} colaborador(es)',
+            subtitle: company.employeesCount != null
+                ? '${company.employeesCount} colaborador(es)'
+                : 'Não preenchido',
             completed: company.employeesCount != null && company.employeesCount! > 0,
-            icon: AppIcons.group,
+            icon: AppIcons.hashtag,
           ),
           _ChecklistLineData(
             title: 'Porte empresarial',
-            subtitle: _valueOrPending(company.companySize),
-            completed: (company.companySize ?? '').trim().isNotEmpty,
-            icon: AppIcons.buildingfull,
+            subtitle: _filledOrPending(company.companySize),
+            completed: _hasText(company.companySize),
+            icon: AppIcons.skyscraper,
+          ),
+        ],
+      ),
+      _ChecklistSectionData(
+        title: 'Visual da página',
+        icon: AppIcons.image,
+        stepKey: 'header',
+        completed: company.hasHeaderContent,
+        items: [
+          _ChecklistLineData(
+            title: 'Capa ou logo',
+            subtitle: company.hasHeaderContent
+                ? 'Visual configurado'
+                : 'Opcional / não preenchido',
+            completed: company.hasHeaderContent,
+            icon: AppIcons.image,
           ),
         ],
       ),
     ];
 
-    final allRequiredCompleted = sections.every((section) => section.completed);
+    final requiredSections = sections.where((section) {
+      return section.stepKey != 'header';
+    }).toList();
+
+    final optionalSections = sections.where((section) {
+      return section.stepKey == 'header';
+    }).toList();
+
+    final allRequiredCompleted = requiredSections.every((section) {
+      if (section.stepKey == 'jobs' && !company.isHiring) return true;
+      return section.completed;
+    });
 
     return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,7 +216,7 @@ class StepCompanyChecklist extends ConsumerWidget {
                     const SizedBox(height: 10),
                     Text(
                       allRequiredCompleted
-                          ? 'Tudo pronto. Revise os dados e finalize a página empresarial.'
+                          ? 'Os dados principais da página empresarial estão prontos. Confira antes de finalizar.'
                           : 'Revise os dados abaixo. Os itens pendentes precisam ser ajustados antes de finalizar.',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.75),
@@ -246,7 +226,19 @@ class StepCompanyChecklist extends ConsumerWidget {
                     const SizedBox(height: 20),
                     _sectionTitle(context, 'Dados da Empresa'),
                     const SizedBox(height: 12),
-                    ...sections.map(
+                    ...requiredSections.map(
+                      (section) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _ChecklistSectionTile(
+                          section: section,
+                          onEdit: () => onEditStep(section.stepKey),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _sectionTitle(context, 'Opcionais'),
+                    const SizedBox(height: 12),
+                    ...optionalSections.map(
                       (section) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _ChecklistSectionTile(
@@ -284,9 +276,12 @@ class StepCompanyChecklist extends ConsumerWidget {
     );
   }
 
-  static String _valueOrPending(String? value) {
-    final text = value?.trim() ?? '';
-    return text.isEmpty ? 'Não preenchido' : text;
+  static bool _hasText(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
+
+  static String _filledOrPending(String? value) {
+    return _hasText(value) ? value!.trim() : 'Não preenchido';
   }
 
   static String _truncate(String value, int max) {
@@ -339,11 +334,9 @@ class _ChecklistSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final pendingColor = Colors.amber.shade300;
-
     final borderColor = section.completed
-        ? theme.colorScheme.primary.withOpacity(1.0)
+        ? Theme.of(context).colorScheme.primary.withOpacity(1.0)
         : pendingColor.withOpacity(0.85);
 
     return Container(
@@ -387,7 +380,7 @@ class _ChecklistSectionTile extends StatelessWidget {
                     height: 16,
                     colorFilter: ColorFilter.mode(
                       section.completed
-                          ? theme.colorScheme.primary
+                          ? Theme.of(context).colorScheme.primary
                           : pendingColor,
                       BlendMode.srcIn,
                     ),
@@ -397,10 +390,7 @@ class _ChecklistSectionTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Divider(
-            height: 1,
-            color: Colors.white.withOpacity(0.12),
-          ),
+          Divider(height: 1, color: Colors.white.withOpacity(0.12)),
           const SizedBox(height: 10),
           ...List.generate(section.items.length, (index) {
             final item = section.items[index];
@@ -419,7 +409,7 @@ class _ChecklistSectionTile extends StatelessWidget {
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
                 color: section.completed
-                    ? theme.colorScheme.primary.withOpacity(0.9)
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.9)
                     : pendingColor.withOpacity(0.95),
               ),
             ),
@@ -433,9 +423,7 @@ class _ChecklistSectionTile extends StatelessWidget {
 class _ChecklistLineItem extends StatelessWidget {
   final _ChecklistLineData item;
 
-  const _ChecklistLineItem({
-    required this.item,
-  });
+  const _ChecklistLineItem({required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -514,16 +502,12 @@ class _ChecklistStatusIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<AppColorsExtension>()!;
+    final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final pendingColor = Colors.amber.shade300;
-
     final iconColor = iconColorOverride ??
-        (completed ? theme.colorScheme.primary : pendingColor);
-
+        (completed ? Theme.of(context).colorScheme.primary : pendingColor);
     final badgeColor = badgeColorOverride ??
-        (completed ? theme.colorScheme.primary : pendingColor);
-
+        (completed ? Theme.of(context).colorScheme.primary : pendingColor);
     final badgeIconColor =
         badgeIconColorOverride ?? Colors.black.withOpacity(0.85);
 
@@ -539,10 +523,7 @@ class _ChecklistStatusIcon extends StatelessWidget {
                 icon,
                 width: size,
                 height: size,
-                colorFilter: ColorFilter.mode(
-                  iconColor,
-                  BlendMode.srcIn,
-                ),
+                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
               ),
             ),
           ),

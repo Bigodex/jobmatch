@@ -1,13 +1,10 @@
 // =======================================================
 // STEP COMPANY TEAM
 // -------------------------------------------------------
-// Etapa de colaboradores da página empresarial
-// - quantidade de colaboradores
-// - porte calculado automaticamente
-// - validação visual no mesmo padrão do onboarding
+// Etapa de colaboradores da empresa
+// - quantidade de funcionários
+// - classificação automática do porte empresarial
 // =======================================================
-
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,19 +32,20 @@ class StepCompanyTeam extends ConsumerStatefulWidget {
 }
 
 class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
-  late final TextEditingController employeesController;
+  late final TextEditingController _employeesController;
 
   bool _employeesHasError = false;
   bool _isNavigating = false;
 
-  int get _employeesCount => int.tryParse(employeesController.text.trim()) ?? 0;
-  bool get _isEmployeesValid => _employeesCount > 0;
+  int? get _employeesCount {
+    final value = _employeesController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (value.isEmpty) return null;
+    return int.tryParse(value);
+  }
 
-  String get _companySize {
-    if (!_isEmployeesValid) return '';
-    return ref
-        .read(companyOnboardingProvider.notifier)
-        .getAutomaticCompanySize(_employeesCount);
+  bool get _isEmployeesValid {
+    final count = _employeesCount;
+    return count != null && count > 0;
   }
 
   @override
@@ -55,20 +53,21 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
     super.initState();
 
     final company = ref.read(companyOnboardingProvider);
-    employeesController = TextEditingController(
-      text: company.employeesCount == null ? '' : '${company.employeesCount}',
+
+    _employeesController = TextEditingController(
+      text: company.employeesCount?.toString() ?? '',
     );
   }
 
   @override
   void dispose() {
-    employeesController.dispose();
+    _employeesController.dispose();
     super.dispose();
   }
 
   Future<void> _showJobuMessageAndWait(
     String message, {
-    int minMilliseconds = 1400,
+    int minMilliseconds = 1300,
   }) async {
     widget.onJobuMessageChange(message);
 
@@ -82,31 +81,24 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
     );
   }
 
-  void _setEmployees(int value) {
-    final safeValue = value < 0 ? 0 : value;
+  void _persistTeam() {
+    final count = _employeesCount;
+    if (count == null || count < 1) return;
+
+    ref.read(companyOnboardingProvider.notifier).setEmployeesCount(count);
+  }
+
+  void _handleEmployeesChanged(String value) {
+    final count = _employeesCount;
 
     setState(() {
-      employeesController.text = safeValue == 0 ? '' : '$safeValue';
-      employeesController.selection = TextSelection.collapsed(
-        offset: employeesController.text.length,
-      );
-      _employeesHasError = false;
+      _employeesHasError = value.trim().isNotEmpty && !_isEmployeesValid;
     });
 
-    widget.onJobuMessageChange(null);
-  }
-
-  void _increment() {
-    _setEmployees(_employeesCount + 1);
-  }
-
-  void _decrement() {
-    if (_employeesCount <= 1) {
-      _setEmployees(0);
-      return;
+    if (count != null && count > 0) {
+      ref.read(companyOnboardingProvider.notifier).setEmployeesCount(count);
+      widget.onJobuMessageChange(null);
     }
-
-    _setEmployees(_employeesCount - 1);
   }
 
   Future<void> _handleContinue() async {
@@ -116,40 +108,34 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
       _employeesHasError = !_isEmployeesValid;
     });
 
-    if (_employeesHasError) {
-      widget.onJobuMessageChange('Informe a quantidade de colaboradores.');
+    if (!_isEmployeesValid) {
+      await _showJobuMessageAndWait(
+        'Me informa a quantidade de colaboradores para eu classificar a empresa automaticamente.',
+      );
       return;
     }
 
-    ref.read(companyOnboardingProvider.notifier).setTeamData(
-          employeesCount: _employeesCount,
-        );
+    _persistTeam();
 
-    setState(() {
-      _isNavigating = true;
-    });
-
-    await _showJobuMessageAndWait(
-      'Boa. Porte empresarial calculado automaticamente.',
-      minMilliseconds: 1200,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _isNavigating = false;
-    });
-
-    widget.onJobuMessageChange(null);
+    setState(() => _isNavigating = true);
     widget.onNext();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<AppColorsExtension>()!;
-    final size = _companySize;
+    final theme = Theme.of(context);
+    final colors = theme.extension<AppColorsExtension>()!;
+    final company = ref.watch(companyOnboardingProvider);
+    final currentSize = company.companySize ??
+        (_employeesCount != null
+            ? ref
+                .read(companyOnboardingProvider.notifier)
+                .getAutomaticCompanySize(_employeesCount!)
+            : null);
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -158,13 +144,7 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(
-                  left: 12,
-                  right: 12,
-                  bottom: 16,
-                  top: 8,
-                ),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: colors.cardTertiary,
                   borderRadius: BorderRadius.circular(16),
@@ -172,85 +152,65 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 8),
                     Row(
                       children: [
                         SvgPicture.asset(
                           AppIcons.group,
                           width: 20,
                           height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
+                          colorFilter: ColorFilter.mode(
+                            theme.colorScheme.primary,
                             BlendMode.srcIn,
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Text(
-                          'Colaboradores',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
+                        const Expanded(
+                          child: Text(
+                            'Colaboradores',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Divider(
-                      color: Colors.white.withOpacity(0.08),
-                      height: 1,
+                    const SizedBox(height: 10),
+                    Text(
+                      'Informe quantas pessoas trabalham na empresa hoje. O porte será definido automaticamente pelo JobMatch.',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.72),
+                        height: 1.45,
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    _fieldTitle(
-                      icon: AppIcons.group,
-                      title: 'Quantidade de colaboradores',
+                    const SizedBox(height: 20),
+                    const _FieldLabel(
+                      label: 'Quantidade de funcionários',
+                      icon: AppIcons.hashtag,
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _counterButton(
-                          icon: Icons.remove_rounded,
-                          onTap: _decrement,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: AppValidatedInputField(
-                            controller: employeesController,
-                            hint: 'Ex: 25',
-                            maxLength: 6,
-                            hasError: _employeesHasError,
-                            isValid: _isEmployeesValid,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                if (_employeesHasError) {
-                                  _employeesHasError =
-                                      (int.tryParse(value.trim()) ?? 0) <= 0;
-                                }
-                              });
-                              widget.onJobuMessageChange(null);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        _counterButton(
-                          icon: Icons.add_rounded,
-                          onTap: _increment,
-                        ),
-                      ],
+                    AppValidatedInputField(
+                      controller: _employeesController,
+                      hint: 'Ex: 42',
+                      hasError: _employeesHasError,
+                      isValid: _isEmployeesValid,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: _handleEmployeesChanged,
                     ),
-                    const SizedBox(height: 16),
-                    _companySizeBox(size),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
+                    _CompanySizePreview(
+                      companySize: currentSize,
+                      employeesCount: _employeesCount,
+                    ),
+                    const SizedBox(height: 18),
+                    _SizeRuleList(currentSize: currentSize),
+                    const SizedBox(height: 22),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _handleContinue,
-                        child: _isNavigating
-                            ? const _LoadingDots(color: Colors.black)
-                            : const Text('Continuar'),
+                        onPressed: _isNavigating ? null : _handleContinue,
+                        child: const Text('Continuar'),
                       ),
                     ),
                   ],
@@ -262,64 +222,21 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
       ),
     );
   }
+}
 
-  Widget _fieldTitle({
-    required String icon,
-    required String title,
-  }) {
-    return Row(
-      children: [
-        SvgPicture.asset(
-          icon,
-          width: 16,
-          height: 16,
-          colorFilter: const ColorFilter.mode(
-            Colors.white,
-            BlendMode.srcIn,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
+class _CompanySizePreview extends StatelessWidget {
+  final String? companySize;
+  final int? employeesCount;
 
-  Widget _counterButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white.withOpacity(0.04),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.18),
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 22,
-          ),
-        ),
-      ),
-    );
-  }
+  const _CompanySizePreview({
+    required this.companySize,
+    required this.employeesCount,
+  });
 
-  Widget _companySizeBox(String size) {
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isValid = size.trim().isNotEmpty;
+    final hasValue = companySize != null && companySize!.trim().isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -328,21 +245,35 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
         color: Colors.white.withOpacity(0.04),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isValid
-              ? theme.colorScheme.primary
+          color: hasValue
+              ? theme.colorScheme.primary.withOpacity(0.85)
               : Colors.white.withOpacity(0.16),
-          width: isValid ? 1.5 : 1,
+          width: hasValue ? 1.5 : 1,
         ),
       ),
       child: Row(
         children: [
-          SvgPicture.asset(
-            AppIcons.buildingfull,
-            width: 18,
-            height: 18,
-            colorFilter: ColorFilter.mode(
-              isValid ? theme.colorScheme.primary : Colors.white54,
-              BlendMode.srcIn,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: hasValue
+                  ? theme.colorScheme.primary.withOpacity(0.16)
+                  : Colors.white.withOpacity(0.06),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                AppIcons.buildingfull,
+                width: 19,
+                height: 19,
+                colorFilter: ColorFilter.mode(
+                  hasValue
+                      ? theme.colorScheme.primary
+                      : Colors.white.withOpacity(0.58),
+                  BlendMode.srcIn,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -351,86 +282,146 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Porte empresarial',
+                  'Classificação automática',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.64),
+                    fontSize: 11.5,
+                    color: Colors.white.withOpacity(0.62),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
-                  isValid ? size : 'Será calculado automaticamente',
+                  hasValue ? companySize! : 'Aguardando quantidade',
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isValid ? Colors.white : Colors.white54,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: hasValue
+                        ? theme.colorScheme.primary
+                        : Colors.white.withOpacity(0.72),
                   ),
                 ),
+                if (employeesCount != null && employeesCount! > 0) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '$employeesCount colaborador(es)',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          if (isValid)
-            Icon(
-              Icons.check_circle_rounded,
-              color: theme.colorScheme.primary,
-              size: 20,
-            ),
         ],
       ),
     );
   }
 }
 
-// =======================================================
-// LOADING DOTS
-// =======================================================
-class _LoadingDots extends StatefulWidget {
-  final Color color;
+class _SizeRuleList extends StatelessWidget {
+  final String? currentSize;
 
-  const _LoadingDots({
-    this.color = Colors.white,
-  });
+  const _SizeRuleList({required this.currentSize});
 
-  @override
-  State<_LoadingDots> createState() => _LoadingDotsState();
-}
-
-class _LoadingDotsState extends State<_LoadingDots>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  static const _rules = [
+    ('Pequena empresa', '1 até 49 funcionários'),
+    ('Média empresa', '50 até 249 funcionários'),
+    ('Grande empresa', '250 até 999 funcionários'),
+    ('Multinacional', '1000+ funcionários'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final phase = (_controller.value * 3).floor() % 3;
-        return Text(
-          '.' * (phase + 1),
-          style: TextStyle(
-            color: widget.color,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
+    return Column(
+      children: _rules.map((rule) {
+        final selected = rule.$1 == currentSize;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                  : Colors.white.withOpacity(0.035),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: selected
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.8)
+                    : Colors.white.withOpacity(0.08),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                  size: 17,
+                  color: selected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.white.withOpacity(0.36),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    rule.$1,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: selected
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.78),
+                    ),
+                  ),
+                ),
+                Text(
+                  rule.$2,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Colors.white.withOpacity(0.55),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
-      },
+      }).toList(),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String label;
+  final String icon;
+
+  const _FieldLabel({
+    required this.label,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SvgPicture.asset(
+          icon,
+          width: 15,
+          height: 15,
+          colorFilter: ColorFilter.mode(
+            Theme.of(context).colorScheme.primary,
+            BlendMode.srcIn,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

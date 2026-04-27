@@ -4,7 +4,7 @@
 // Cadastro inicial de vagas da empresa
 // - exige ao menos 1 vaga
 // - seleção via modal no estilo da referência
-// - estados/cidades via onboardingProvider
+// - estados/cidades via companyOnboardingProvider
 // =======================================================
 
 import 'dart:async';
@@ -17,7 +17,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/company/providers/company_onboarding_provider.dart';
-import 'package:jobmatch/features/onboarding/providers/onboarding_provider.dart';
 import 'package:jobmatch/shared/widgets/app_section_card.dart';
 import 'package:jobmatch/shared/widgets/app_validated_input_field.dart';
 import 'package:jobmatch/shared/widgets/app_validated_selector_field.dart';
@@ -100,20 +99,6 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     return null;
   }
 
-  static String _iconForLevel(String value) {
-    for (final item in _levels) {
-      if (item.label == value) return item.icon;
-    }
-    return AppIcons.three;
-  }
-
-  static String _iconForWorkMode(String value) {
-    for (final item in _workModes) {
-      if (item.label == value) return item.icon;
-    }
-    return AppIcons.model;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -122,29 +107,8 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     _descriptionController = TextEditingController();
     _salaryController = TextEditingController();
 
-    final company = ref.read(companyOnboardingProvider);
-    _jobs.addAll(
-      company.jobs.map((job) {
-        final locationParts = job.location.split(' - ');
-        final city = locationParts.isNotEmpty ? locationParts.first : '';
-        final uf = locationParts.length > 1 ? locationParts.last : '';
-
-        return {
-          'title': job.title,
-          'description': job.description,
-          'level': job.seniority,
-          'levelIcon': _iconForLevel(job.seniority),
-          'workMode': job.workModel,
-          'workModeIcon': _iconForWorkMode(job.workModel),
-          'uf': uf,
-          'city': city,
-          'salary': job.salary,
-        };
-      }),
-    );
-
     Future.microtask(() async {
-      await ref.read(onboardingProvider.notifier).loadStates();
+      await ref.read(companyOnboardingProvider.notifier).loadStates();
     });
   }
 
@@ -300,22 +264,7 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
   }
 
   void _persistJobs() {
-    final drafts = _jobs.map((job) {
-      final city = (job['city'] ?? '').trim();
-      final uf = (job['uf'] ?? '').trim();
-      final location = city.isEmpty && uf.isEmpty ? '' : '${city} - ${uf}';
-
-      return CompanyJobDraft(
-        title: (job['title'] ?? '').trim(),
-        seniority: (job['level'] ?? '').trim(),
-        workModel: (job['workMode'] ?? '').trim(),
-        location: location,
-        salary: (job['salary'] ?? '').trim(),
-        description: (job['description'] ?? '').trim(),
-      );
-    }).toList();
-
-    ref.read(companyOnboardingProvider.notifier).setJobs(drafts);
+    // ligar no provider/model depois
   }
 
   Future<void> _handleContinue() async {
@@ -394,12 +343,27 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
   }
 
   Future<void> _openStateSelector() async {
-    final onboarding = ref.read(onboardingProvider);
+    var companyOnboarding = ref.read(companyOnboardingProvider);
+
+    if (companyOnboarding.isLoadingStates) return;
+
+    if (companyOnboarding.states.isEmpty) {
+      await ref.read(companyOnboardingProvider.notifier).loadStates();
+      companyOnboarding = ref.read(companyOnboardingProvider);
+    }
+
+    if (companyOnboarding.states.isEmpty) {
+      setState(() {
+        _stateHasError = true;
+      });
+      widget.onJobuMessageChange('Não foi possível carregar os estados.');
+      return;
+    }
 
     final result = await _showOptionsBottomSheet<Map<String, dynamic>>(
       title: 'Estado',
       searchHint: 'Buscar estado',
-      items: List<Map<String, dynamic>>.from(onboarding.states),
+      items: List<Map<String, dynamic>>.from(companyOnboarding.states),
       selectedCheck: (item) => (item['sigla'] ?? '').toString() == _selectedUf,
       titleBuilder: (item) => (item['nome'] ?? '').toString(),
       subtitleBuilder: (item) => (item['sigla'] ?? '').toString(),
@@ -417,7 +381,7 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
       _cityHasError = false;
     });
 
-    await ref.read(onboardingProvider.notifier).loadCitiesByUf(uf);
+    await ref.read(companyOnboardingProvider.notifier).loadCitiesByUf(uf);
     widget.onJobuMessageChange(null);
   }
 
@@ -431,12 +395,22 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
       return;
     }
 
-    final onboarding = ref.read(onboardingProvider);
+    final companyOnboarding = ref.read(companyOnboardingProvider);
+
+    if (companyOnboarding.isLoadingCities) return;
+
+    if (companyOnboarding.cities.isEmpty) {
+      setState(() {
+        _cityHasError = true;
+      });
+      widget.onJobuMessageChange('Não foi possível carregar as cidades.');
+      return;
+    }
 
     final result = await _showOptionsBottomSheet<Map<String, dynamic>>(
       title: 'Cidade',
       searchHint: 'Buscar cidade',
-      items: List<Map<String, dynamic>>.from(onboarding.cities),
+      items: List<Map<String, dynamic>>.from(companyOnboarding.cities),
       selectedCheck: (item) => (item['nome'] ?? '').toString() == _selectedCity,
       titleBuilder: (item) => (item['nome'] ?? '').toString(),
       subtitleBuilder: (_) => '',
@@ -658,10 +632,10 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     );
   }
 
-  String _getSelectedStateLabel(OnboardingState onboarding) {
+  String _getSelectedStateLabel(CompanyOnboardingState companyOnboarding) {
     if (_selectedUf == null || _selectedUf!.trim().isEmpty) return '';
 
-    final stateMap = onboarding.states.cast<Map<String, dynamic>?>().firstWhere(
+    final stateMap = companyOnboarding.states.cast<Map<String, dynamic>?>().firstWhere(
           (item) => (item?['sigla'] ?? '').toString() == _selectedUf,
           orElse: () => null,
         );
@@ -684,10 +658,10 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
-    final onboarding = ref.watch(onboardingProvider);
+    final companyOnboarding = ref.watch(companyOnboardingProvider);
     final companyName = _getCompanyName();
 
-    final stateValue = _getSelectedStateLabel(onboarding);
+    final stateValue = _getSelectedStateLabel(companyOnboarding);
     final cityValue = _selectedCity ?? '';
 
     return Transform.translate(
@@ -696,7 +670,6 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 30),
             AppSectionCard(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -831,14 +804,15 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
                       ),
                       const SizedBox(height: 8),
                       AppValidatedSelectorField(
-                        hint: onboarding.isLoadingStates
+                        hint: companyOnboarding.isLoadingStates
                             ? 'Carregando estados...'
                             : 'Selecionar estado',
                         value: stateValue.isEmpty ? null : stateValue,
                         hasError: _stateHasError,
                         isValid: _isStateValid,
-                        isLoading: onboarding.isLoadingStates,
-                        enabled: !onboarding.isLoadingStates,
+                        isLoading: companyOnboarding.isLoadingStates,
+                        enabled: !companyOnboarding.isLoadingStates &&
+                            companyOnboarding.states.isNotEmpty,
                         onTap: _openStateSelector,
                       ),
 
@@ -852,17 +826,33 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
                       AppValidatedSelectorField(
                         hint: _selectedUf == null
                             ? 'Selecione primeiro o estado'
-                            : onboarding.isLoadingCities
+                            : companyOnboarding.isLoadingCities
                                 ? 'Carregando cidades...'
-                                : 'Selecionar cidade',
+                                : companyOnboarding.cities.isEmpty
+                                    ? 'Nenhuma cidade encontrada'
+                                    : 'Selecionar cidade',
                         value: cityValue.isEmpty ? null : cityValue,
                         hasError: _cityHasError,
                         isValid: _isCityValid,
-                        isLoading: onboarding.isLoadingCities,
-                        enabled:
-                            _selectedUf != null && !onboarding.isLoadingCities,
+                        isLoading: companyOnboarding.isLoadingCities,
+                        enabled: _selectedUf != null &&
+                            !companyOnboarding.isLoadingCities &&
+                            companyOnboarding.cities.isNotEmpty,
                         onTap: _openCitySelector,
                       ),
+
+                      if (companyOnboarding.locationError != null &&
+                          companyOnboarding.locationError!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          companyOnboarding.locationError!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.red.shade300,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(height: 10),
 

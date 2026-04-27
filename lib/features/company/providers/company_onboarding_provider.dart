@@ -6,6 +6,9 @@
 // =======================================================
 
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:jobmatch/features/onboarding/services/ibge_localidades_service.dart';
 
 // =======================================================
 // SENTINELA PARA COPYWITH
@@ -102,6 +105,15 @@ class CompanyOnboardingState {
   final String? description;
 
   // ===================================================
+  // LOCALIZAÇÃO / IBGE
+  // ===================================================
+  final List<Map<String, dynamic>> states;
+  final List<Map<String, dynamic>> cities;
+  final bool isLoadingStates;
+  final bool isLoadingCities;
+  final String? locationError;
+
+  // ===================================================
   // CONTRATAÇÃO / VAGAS
   // ===================================================
   final bool isHiring;
@@ -124,6 +136,11 @@ class CompanyOnboardingState {
     this.companyType,
     this.website,
     this.description,
+    this.states = const [],
+    this.cities = const [],
+    this.isLoadingStates = false,
+    this.isLoadingCities = false,
+    this.locationError,
     this.isHiring = false,
     this.jobs = const [],
     this.employeesCount,
@@ -144,6 +161,11 @@ class CompanyOnboardingState {
     Object? companyType = _unset,
     Object? website = _unset,
     Object? description = _unset,
+    List<Map<String, dynamic>>? states,
+    List<Map<String, dynamic>>? cities,
+    bool? isLoadingStates,
+    bool? isLoadingCities,
+    Object? locationError = _unset,
     bool? isHiring,
     List<CompanyJobDraft>? jobs,
     Object? employeesCount = _unset,
@@ -168,6 +190,13 @@ class CompanyOnboardingState {
       description: identical(description, _unset)
           ? this.description
           : description as String?,
+      states: states ?? this.states,
+      cities: cities ?? this.cities,
+      isLoadingStates: isLoadingStates ?? this.isLoadingStates,
+      isLoadingCities: isLoadingCities ?? this.isLoadingCities,
+      locationError: identical(locationError, _unset)
+          ? this.locationError
+          : locationError as String?,
       isHiring: isHiring ?? this.isHiring,
       jobs: jobs ?? this.jobs,
       employeesCount: identical(employeesCount, _unset)
@@ -195,7 +224,8 @@ class CompanyOnboardingState {
   }
 
   bool get hasAboutData {
-    return (companyType?.trim().isNotEmpty ?? false) &&
+    return (sector?.trim().isNotEmpty ?? false) &&
+        (companyType?.trim().isNotEmpty ?? false) &&
         (description?.trim().isNotEmpty ?? false);
   }
 
@@ -211,7 +241,10 @@ class CompanyOnboardingState {
 // =======================================================
 class CompanyOnboardingController
     extends StateNotifier<CompanyOnboardingState> {
-  CompanyOnboardingController() : super(const CompanyOnboardingState());
+  final IbgeLocalidadesService _ibgeService;
+
+  CompanyOnboardingController(this._ibgeService)
+      : super(const CompanyOnboardingState());
 
   // ===================================================
   // HEADER
@@ -276,6 +309,76 @@ class CompanyOnboardingController
   }
 
   // ===================================================
+  // IBGE - ESTADOS
+  // ===================================================
+  Future<void> loadStates() async {
+    if (state.isLoadingStates) return;
+    if (state.states.isNotEmpty) return;
+
+    state = state.copyWith(
+      isLoadingStates: true,
+      locationError: null,
+    );
+
+    try {
+      final result = await _ibgeService.fetchStates();
+
+      state = state.copyWith(
+        states: result,
+        isLoadingStates: false,
+        locationError: null,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        states: const [],
+        isLoadingStates: false,
+        locationError: 'Erro ao carregar estados.',
+      );
+    }
+  }
+
+  // ===================================================
+  // IBGE - CIDADES POR UF
+  // ===================================================
+  Future<void> loadCitiesByUf(String uf) async {
+    final safeUf = uf.trim();
+    if (safeUf.isEmpty) return;
+
+    state = state.copyWith(
+      cities: const [],
+      isLoadingCities: true,
+      locationError: null,
+    );
+
+    try {
+      final result = await _ibgeService.fetchCitiesByUf(safeUf);
+
+      state = state.copyWith(
+        cities: result,
+        isLoadingCities: false,
+        locationError: null,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        cities: const [],
+        isLoadingCities: false,
+        locationError: 'Erro ao carregar cidades.',
+      );
+    }
+  }
+
+  // ===================================================
+  // LIMPAR CIDADES
+  // ===================================================
+  void clearCities() {
+    state = state.copyWith(
+      cities: const [],
+      isLoadingCities: false,
+      locationError: null,
+    );
+  }
+
+  // ===================================================
   // CONTRATAÇÃO
   // ===================================================
   void setHiring(bool value) {
@@ -325,32 +428,17 @@ class CompanyOnboardingController
   void setEmployeesCount(int count) {
     final safeCount = count < 1 ? 1 : count;
     final autoSize = getAutomaticCompanySize(safeCount);
-    final allowedSizes = getAllowedCompanySizes(safeCount);
-
-    final nextSize = allowedSizes.contains(state.companySize)
-        ? state.companySize
-        : autoSize;
 
     state = state.copyWith(
       employeesCount: safeCount,
-      companySize: nextSize,
+      companySize: autoSize,
     );
   }
 
   void setCompanySize(String size) {
-    final employeesCount = state.employeesCount;
-
-    if (employeesCount == null || employeesCount < 1) {
-      state = state.copyWith(companySize: size);
-      return;
-    }
-
-    final allowedSizes = getAllowedCompanySizes(employeesCount);
-
-    if (!allowedSizes.contains(size)) {
-      return;
-    }
-
+    // O porte empresarial é calculado automaticamente pela quantidade
+    // de colaboradores. Este método fica preservado para compatibilidade
+    // com chamadas antigas do fluxo.
     state = state.copyWith(companySize: size);
   }
 
@@ -359,55 +447,39 @@ class CompanyOnboardingController
     String? companySize,
   }) {
     final safeCount = employeesCount < 1 ? 1 : employeesCount;
-    final allowedSizes = getAllowedCompanySizes(safeCount);
     final autoSize = getAutomaticCompanySize(safeCount);
-
-    final resolvedSize = companySize != null && allowedSizes.contains(companySize)
-        ? companySize
-        : autoSize;
 
     state = state.copyWith(
       employeesCount: safeCount,
-      companySize: resolvedSize,
+      companySize: autoSize,
     );
   }
 
   // ===================================================
   // REGRAS DE PORTE EMPRESARIAL
   // ---------------------------------------------------
-  // Regras coesas e restritas para não permitir
-  // combinações irreais
+  // Classificação automática usada pelo step de
+  // colaboradores. A régua começa em pequena empresa e
+  // evolui até multinacional.
   // ===================================================
   String getAutomaticCompanySize(int employeesCount) {
-    if (employeesCount <= 9) {
-      return 'Microempresa';
-    }
-
     if (employeesCount <= 49) {
       return 'Pequena empresa';
     }
 
-    if (employeesCount <= 99) {
+    if (employeesCount <= 249) {
       return 'Média empresa';
     }
 
-    return 'Grande empresa';
+    if (employeesCount <= 999) {
+      return 'Grande empresa';
+    }
+
+    return 'Multinacional';
   }
 
   List<String> getAllowedCompanySizes(int employeesCount) {
-    if (employeesCount <= 9) {
-      return const ['Microempresa'];
-    }
-
-    if (employeesCount <= 49) {
-      return const ['Pequena empresa'];
-    }
-
-    if (employeesCount <= 99) {
-      return const ['Média empresa'];
-    }
-
-    return const ['Grande empresa'];
+    return [getAutomaticCompanySize(employeesCount)];
   }
 
   // ===================================================
@@ -423,5 +495,8 @@ class CompanyOnboardingController
 // =======================================================
 final companyOnboardingProvider = StateNotifierProvider<
     CompanyOnboardingController, CompanyOnboardingState>((ref) {
-  return CompanyOnboardingController();
+  final client = http.Client();
+  final service = IbgeLocalidadesService(client);
+
+  return CompanyOnboardingController(service);
 });
