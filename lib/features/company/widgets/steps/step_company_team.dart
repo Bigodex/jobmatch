@@ -2,7 +2,7 @@
 // STEP COMPANY TEAM
 // -------------------------------------------------------
 // Etapa de colaboradores da empresa
-// - quantidade de funcionários
+// - quantidade de colaboradores
 // - classificação automática do porte empresarial
 // =======================================================
 
@@ -88,6 +88,35 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
     ref.read(companyOnboardingProvider.notifier).setEmployeesCount(count);
   }
 
+  void _setEmployeesValue(int value) {
+    final safeValue = value < 1 ? 1 : value;
+
+    _employeesController.text = safeValue.toString();
+    _employeesController.selection = TextSelection.fromPosition(
+      TextPosition(offset: _employeesController.text.length),
+    );
+
+    setState(() => _employeesHasError = false);
+
+    ref.read(companyOnboardingProvider.notifier).setEmployeesCount(safeValue);
+    widget.onJobuMessageChange(null);
+  }
+
+  void _incrementEmployees() {
+    _setEmployeesValue((_employeesCount ?? 0) + 1);
+  }
+
+  void _decrementEmployees() {
+    final count = _employeesCount;
+
+    if (count == null || count <= 1) {
+      _setEmployeesValue(1);
+      return;
+    }
+
+    _setEmployeesValue(count - 1);
+  }
+
   void _handleEmployeesChanged(String value) {
     final count = _employeesCount;
 
@@ -156,10 +185,10 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
                       children: [
                         SvgPicture.asset(
                           AppIcons.group,
-                          width: 20,
-                          height: 20,
-                          colorFilter: ColorFilter.mode(
-                            theme.colorScheme.primary,
+                          width: 24,
+                          height: 24,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
                             BlendMode.srcIn,
                           ),
                         ),
@@ -168,43 +197,53 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
                           child: Text(
                             'Colaboradores',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Informe quantas pessoas trabalham na empresa hoje. O porte será definido automaticamente pelo JobMatch.',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.72),
-                        height: 1.45,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    Divider(height: 1, color: Colors.white.withOpacity(0.12)),
                     const SizedBox(height: 20),
                     const _FieldLabel(
-                      label: 'Quantidade de funcionários',
-                      icon: AppIcons.hashtag,
+                      label: 'Quantidade de colaboradores',
+                      icon: AppIcons.group,
                     ),
-                    const SizedBox(height: 8),
-                    AppValidatedInputField(
-                      controller: _employeesController,
-                      hint: 'Ex: 42',
-                      hasError: _employeesHasError,
-                      isValid: _isEmployeesValid,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: _handleEmployeesChanged,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        _CounterButton(
+                          icon: Icons.remove_rounded,
+                          onTap: _decrementEmployees,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: AppValidatedInputField(
+                            controller: _employeesController,
+                            hint: 'Ex: 42',
+                            hasError: _employeesHasError,
+                            isValid: _isEmployeesValid,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onChanged: _handleEmployeesChanged,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        _CounterButton(
+                          icon: Icons.add_rounded,
+                          onTap: _incrementEmployees,
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 18),
                     _CompanySizePreview(
                       companySize: currentSize,
                       employeesCount: _employeesCount,
                     ),
-                    const SizedBox(height: 18),
-                    _SizeRuleList(currentSize: currentSize),
                     const SizedBox(height: 22),
                     SizedBox(
                       width: double.infinity,
@@ -219,6 +258,38 @@ class _StepCompanyTeamState extends ConsumerState<StepCompanyTeam> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CounterButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CounterButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.18), width: 1.4),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 28,
+        ),
       ),
     );
   }
@@ -240,64 +311,50 @@ class _CompanySizePreview extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasValue
-              ? theme.colorScheme.primary.withOpacity(0.85)
+              ? theme.colorScheme.primary.withOpacity(0.95)
               : Colors.white.withOpacity(0.16),
-          width: hasValue ? 1.5 : 1,
+          width: hasValue ? 1.8 : 1,
         ),
       ),
       child: Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: hasValue
-                  ? theme.colorScheme.primary.withOpacity(0.16)
-                  : Colors.white.withOpacity(0.06),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: SvgPicture.asset(
-                AppIcons.buildingfull,
-                width: 19,
-                height: 19,
-                colorFilter: ColorFilter.mode(
-                  hasValue
-                      ? theme.colorScheme.primary
-                      : Colors.white.withOpacity(0.58),
-                  BlendMode.srcIn,
-                ),
-              ),
+          SvgPicture.asset(
+            AppIcons.buildingfull,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(
+              hasValue
+                  ? theme.colorScheme.primary
+                  : Colors.white.withOpacity(0.58),
+              BlendMode.srcIn,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Classificação automática',
+                  'Porte empresarial',
                   style: TextStyle(
-                    fontSize: 11.5,
-                    color: Colors.white.withOpacity(0.62),
-                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                    color: Colors.white.withOpacity(0.56),
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   hasValue ? companySize! : 'Aguardando quantidade',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: hasValue
-                        ? theme.colorScheme.primary
-                        : Colors.white.withOpacity(0.72),
+                    color: hasValue ? Colors.white : Colors.white.withOpacity(0.72),
                   ),
                 ),
                 if (employeesCount != null && employeesCount! > 0) ...[
@@ -306,87 +363,21 @@ class _CompanySizePreview extends StatelessWidget {
                     '$employeesCount colaborador(es)',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withOpacity(0.58),
                     ),
                   ),
                 ],
               ],
             ),
           ),
+          if (hasValue)
+            Icon(
+              Icons.check_circle_rounded,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
         ],
       ),
-    );
-  }
-}
-
-class _SizeRuleList extends StatelessWidget {
-  final String? currentSize;
-
-  const _SizeRuleList({required this.currentSize});
-
-  static const _rules = [
-    ('Pequena empresa', '1 até 49 funcionários'),
-    ('Média empresa', '50 até 249 funcionários'),
-    ('Grande empresa', '250 até 999 funcionários'),
-    ('Multinacional', '1000+ funcionários'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: _rules.map((rule) {
-        final selected = rule.$1 == currentSize;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: selected
-                  ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
-                  : Colors.white.withOpacity(0.035),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: selected
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.8)
-                    : Colors.white.withOpacity(0.08),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected
-                      ? Icons.check_circle_rounded
-                      : Icons.circle_outlined,
-                  size: 17,
-                  color: selected
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.white.withOpacity(0.36),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    rule.$1,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: selected
-                          ? Colors.white
-                          : Colors.white.withOpacity(0.78),
-                    ),
-                  ),
-                ),
-                Text(
-                  rule.$2,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: Colors.white.withOpacity(0.55),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }
@@ -406,10 +397,10 @@ class _FieldLabel extends StatelessWidget {
       children: [
         SvgPicture.asset(
           icon,
-          width: 15,
-          height: 15,
-          colorFilter: ColorFilter.mode(
-            Theme.of(context).colorScheme.primary,
+          width: 18,
+          height: 18,
+          colorFilter: const ColorFilter.mode(
+            Colors.white,
             BlendMode.srcIn,
           ),
         ),
@@ -417,8 +408,8 @@ class _FieldLabel extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ],

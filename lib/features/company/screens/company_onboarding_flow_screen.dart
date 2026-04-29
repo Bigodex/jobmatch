@@ -5,6 +5,7 @@
 // - reaproveita header de progresso
 // - reaproveita Jobu
 // - step de vagas é condicional
+// - edição pelo checklist volta para o checklist
 // =======================================================
 
 import 'package:flutter/material.dart';
@@ -34,10 +35,15 @@ class _CompanyOnboardingFlowScreenState
     extends ConsumerState<CompanyOnboardingFlowScreen> {
   CompanyOnboardingStep _currentStep = CompanyOnboardingStep.header;
   String? _jobuMessage;
+  bool _isEditingFromChecklist = false;
 
-  void _setStep(CompanyOnboardingStep step) {
+  void _setStep(
+    CompanyOnboardingStep step, {
+    bool editingFromChecklist = false,
+  }) {
     setState(() {
       _currentStep = step;
+      _isEditingFromChecklist = editingFromChecklist;
       _jobuMessage = null;
     });
   }
@@ -84,6 +90,11 @@ class _CompanyOnboardingFlowScreenState
   }
 
   void _prevStep() {
+    if (_isEditingFromChecklist) {
+      _setStep(CompanyOnboardingStep.checklist);
+      return;
+    }
+
     final company = ref.read(companyOnboardingProvider);
     final steps = _getActiveSteps(company);
     final currentIndex = steps.indexOf(_currentStep);
@@ -97,6 +108,11 @@ class _CompanyOnboardingFlowScreenState
   }
 
   void _handleStepComplete() {
+    if (_isEditingFromChecklist) {
+      _setStep(CompanyOnboardingStep.checklist);
+      return;
+    }
+
     _nextStep();
   }
 
@@ -117,7 +133,7 @@ class _CompanyOnboardingFlowScreenState
       case CompanyOnboardingStep.jobs:
         return 'Show! Bora cadastrar pelo menos uma vaga.';
       case CompanyOnboardingStep.team:
-        return 'Me diz o tamanho do time que eu classifico o porte da empresa.';
+        return 'Quantas pessoas trabalham aí hoje?';
       case CompanyOnboardingStep.checklist:
         return 'Confere tudo antes de finalizar a página.';
     }
@@ -137,7 +153,9 @@ class _CompanyOnboardingFlowScreenState
                 switchInCurve: Curves.easeOut,
                 switchOutCurve: Curves.easeIn,
                 child: CompanyOnboardingLayout(
-                  key: ValueKey(_currentStep.name),
+                  key: ValueKey(
+                    '${_currentStep.name}-${_isEditingFromChecklist ? "edit" : "flow"}',
+                  ),
                   progressCurrentStep: _getProgressCurrentStep(company),
                   totalSteps: _getProgressTotalSteps(company),
                   onBack: _prevStep,
@@ -205,25 +223,31 @@ class _CompanyOnboardingFlowScreenState
   }
 
   void _handleChecklistEdit(String stepKey) {
+    CompanyOnboardingStep? targetStep;
+
     switch (stepKey) {
       case 'header':
-        _setStep(CompanyOnboardingStep.header);
+        targetStep = CompanyOnboardingStep.header;
         break;
       case 'identity':
-        _setStep(CompanyOnboardingStep.identity);
+        targetStep = CompanyOnboardingStep.identity;
         break;
       case 'about':
-        _setStep(CompanyOnboardingStep.about);
+        targetStep = CompanyOnboardingStep.about;
         break;
       case 'hiring':
-        _setStep(CompanyOnboardingStep.hiring);
+        targetStep = CompanyOnboardingStep.hiring;
         break;
       case 'jobs':
-        _setStep(CompanyOnboardingStep.jobs);
+        targetStep = CompanyOnboardingStep.jobs;
         break;
       case 'team':
-        _setStep(CompanyOnboardingStep.team);
+        targetStep = CompanyOnboardingStep.team;
         break;
     }
+
+    if (targetStep == null) return;
+
+    _setStep(targetStep, editingFromChecklist: true);
   }
 }

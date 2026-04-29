@@ -28,8 +28,9 @@ class StepCompanyChecklist extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<AppColorsExtension>()!;
     final company = ref.watch(companyOnboardingProvider);
+    final hasJobs = company.jobs.isNotEmpty;
 
-    final sections = [
+    final requiredSections = [
       _ChecklistSectionData(
         title: 'Identidade',
         icon: AppIcons.id,
@@ -50,7 +51,9 @@ class StepCompanyChecklist extends ConsumerWidget {
           ),
           _ChecklistLineData(
             title: 'CNPJ',
-            subtitle: _filledOrPending(company.cnpj),
+            subtitle: _hasText(company.cnpj)
+                ? _maskCnpj(company.cnpj!)
+                : 'Não preenchido',
             completed: _hasText(company.cnpj),
             icon: AppIcons.id2,
           ),
@@ -68,6 +71,20 @@ class StepCompanyChecklist extends ConsumerWidget {
             completed: _hasText(company.companyType),
             icon: AppIcons.buildingbriefcase,
           ),
+          if (_hasText(company.slogan))
+            _ChecklistLineData(
+              title: 'Slogan',
+              subtitle: company.slogan!.trim(),
+              completed: true,
+              icon: AppIcons.chat,
+            ),
+          if (_hasText(company.website))
+            _ChecklistLineData(
+              title: 'Site oficial',
+              subtitle: company.website!.trim(),
+              completed: true,
+              icon: AppIcons.links,
+            ),
           _ChecklistLineData(
             title: 'Descrição',
             subtitle: _hasText(company.description)
@@ -76,39 +93,24 @@ class StepCompanyChecklist extends ConsumerWidget {
             completed: _hasText(company.description),
             icon: AppIcons.resume,
           ),
-          if (_hasText(company.website))
-            _ChecklistLineData(
-              title: 'Site',
-              subtitle: company.website,
-              completed: true,
-              icon: AppIcons.links,
-            ),
         ],
       ),
       _ChecklistSectionData(
         title: 'Contratação',
         icon: AppIcons.briefcase,
-        stepKey: 'hiring',
+        stepKey: hasJobs ? 'jobs' : 'hiring',
         completed: true,
-        items: [
-          _ChecklistLineData(
-            title: 'Status de contratação',
-            subtitle: company.isHiring
-                ? 'Empresa está contratando agora'
-                : 'Empresa não está contratando agora',
-            completed: true,
-            icon: company.isHiring ? AppIcons.verify : AppIcons.info,
-          ),
-        ],
-      ),
-      if (company.isHiring)
-        _ChecklistSectionData(
-          title: 'Vagas',
-          icon: AppIcons.bagmoney,
-          stepKey: 'jobs',
-          completed: company.jobs.isNotEmpty,
-          items: company.jobs.isNotEmpty
-              ? company.jobs.take(3).map((job) {
+        items: hasJobs
+            ? [
+                _ChecklistLineData(
+                  title: company.jobs.length == 1
+                      ? '1 vaga inserida'
+                      : '${company.jobs.length} vagas inseridas',
+                  subtitle: 'Empresa está contratando no momento.',
+                  completed: true,
+                  icon: AppIcons.verify,
+                ),
+                ...company.jobs.take(3).map((job) {
                   final subtitleParts = <String>[
                     if (job.seniority.trim().isNotEmpty) job.seniority,
                     if (job.workModel.trim().isNotEmpty) job.workModel,
@@ -123,18 +125,19 @@ class StepCompanyChecklist extends ConsumerWidget {
                     completed: true,
                     icon: AppIcons.briefcase,
                   );
-                }).toList()
-              : [
-                  _ChecklistLineData(
-                    title: 'Nenhuma vaga cadastrada',
-                    completed: false,
-                    icon: AppIcons.briefcase,
-                  ),
-                ],
-          footerText: company.jobs.length > 3
-              ? '+${company.jobs.length - 3} vaga(s) cadastrada(s)'
-              : null,
-        ),
+                }),
+              ]
+            : [
+                _ChecklistLineData(
+                  title: 'A empresa não está contratando no momento.',
+                  completed: true,
+                  icon: AppIcons.info,
+                ),
+              ],
+        footerText: company.jobs.length > 3
+            ? '+${company.jobs.length - 3} vaga(s) cadastrada(s)'
+            : null,
+      ),
       _ChecklistSectionData(
         title: 'Colaboradores',
         icon: AppIcons.group,
@@ -157,8 +160,11 @@ class StepCompanyChecklist extends ConsumerWidget {
           ),
         ],
       ),
+    ];
+
+    final optionalSections = [
       _ChecklistSectionData(
-        title: 'Visual da página',
+        title: 'Fotos de Capa e Perfil da empresa',
         icon: AppIcons.image,
         stepKey: 'header',
         completed: company.hasHeaderContent,
@@ -175,16 +181,7 @@ class StepCompanyChecklist extends ConsumerWidget {
       ),
     ];
 
-    final requiredSections = sections.where((section) {
-      return section.stepKey != 'header';
-    }).toList();
-
-    final optionalSections = sections.where((section) {
-      return section.stepKey == 'header';
-    }).toList();
-
     final allRequiredCompleted = requiredSections.every((section) {
-      if (section.stepKey == 'jobs' && !company.isHiring) return true;
       return section.completed;
     });
 
@@ -288,6 +285,13 @@ class StepCompanyChecklist extends ConsumerWidget {
     final text = value.trim();
     if (text.length <= max) return text;
     return '${text.substring(0, max).trim()}...';
+  }
+
+  static String _maskCnpj(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length != 14) return value.trim();
+
+    return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8, 12)}-${digits.substring(12, 14)}';
   }
 }
 
