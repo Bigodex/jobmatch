@@ -214,6 +214,7 @@ class CompanyOnboardingState {
   bool get hasHeaderContent {
     final hasCover = (coverUrl ?? '').trim().isNotEmpty;
     final hasLogo = (logoUrl ?? '').trim().isNotEmpty;
+
     return hasCover || hasLogo;
   }
 
@@ -224,8 +225,7 @@ class CompanyOnboardingState {
   }
 
   bool get hasAboutData {
-    return (sector?.trim().isNotEmpty ?? false) &&
-        (companyType?.trim().isNotEmpty ?? false) &&
+    return (companyType?.trim().isNotEmpty ?? false) &&
         (description?.trim().isNotEmpty ?? false);
   }
 
@@ -459,20 +459,24 @@ class CompanyOnboardingController
   // REGRAS DE PORTE EMPRESARIAL
   // ---------------------------------------------------
   // Classificação automática usada pelo step de
-  // colaboradores. A régua começa em pequena empresa e
+  // colaboradores. A régua começa em microempresa e
   // evolui até multinacional.
   // ===================================================
   String getAutomaticCompanySize(int employeesCount) {
-    if (employeesCount <= 49) {
-      return 'Pequena empresa';
+    if (employeesCount <= 19) {
+      return 'Microempresa';
     }
 
-    if (employeesCount <= 249) {
-      return 'Média empresa';
+    if (employeesCount <= 99) {
+      return 'Pequeno Porte';
+    }
+
+    if (employeesCount <= 499) {
+      return 'Médio Porte';
     }
 
     if (employeesCount <= 999) {
-      return 'Grande empresa';
+      return 'Grande Porte';
     }
 
     return 'Multinacional';
