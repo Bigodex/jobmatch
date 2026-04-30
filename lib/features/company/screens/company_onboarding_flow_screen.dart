@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:jobmatch/features/company/providers/company_onboarding_provider.dart';
+import 'package:jobmatch/features/profile_company/providers/company_profile_provider.dart';
 import 'package:jobmatch/features/company/widgets/company_onboarding_layout.dart';
 import 'package:jobmatch/features/company/widgets/company_onboarding_step.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_about.dart';
@@ -24,7 +25,12 @@ import 'package:jobmatch/features/company/widgets/steps/step_company_jobs.dart';
 import 'package:jobmatch/features/company/widgets/steps/step_company_team.dart';
 
 class CompanyOnboardingFlowScreen extends ConsumerStatefulWidget {
-  const CompanyOnboardingFlowScreen({super.key});
+  final String backFallbackRoute;
+
+  const CompanyOnboardingFlowScreen({
+    super.key,
+    this.backFallbackRoute = '/menu',
+  });
 
   @override
   ConsumerState<CompanyOnboardingFlowScreen> createState() =>
@@ -100,7 +106,12 @@ class _CompanyOnboardingFlowScreenState
     final currentIndex = steps.indexOf(_currentStep);
 
     if (currentIndex <= 0) {
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+        return;
+      }
+
+      context.go(widget.backFallbackRoute);
       return;
     }
 
@@ -206,13 +217,40 @@ class _CompanyOnboardingFlowScreenState
         return StepCompanyChecklist(
           onEditStep: _handleChecklistEdit,
           onFinish: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Página empresarial revisada com sucesso.'),
-              ),
-            );
+            _finishCompanyOnboarding();
           },
         );
+    }
+  }
+
+  Future<void> _finishCompanyOnboarding() async {
+    final company = ref.read(companyOnboardingProvider);
+
+    try {
+      final createdCompany = await ref
+          .read(companyProfileProvider.notifier)
+          .createFromOnboarding(company);
+
+      ref.invalidate(companyProfilesProvider);
+      ref.read(companyOnboardingProvider.notifier).reset();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Página empresarial criada com sucesso.'),
+        ),
+      );
+
+      context.go('/company/profile/${createdCompany.id}');
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao criar página empresarial: $e'),
+        ),
+      );
     }
   }
 

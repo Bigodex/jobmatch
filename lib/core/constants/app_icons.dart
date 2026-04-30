@@ -122,6 +122,7 @@ class AppIcons {
   // IMAGES
   // ===================================================
 
+  static const String jobuCompany = '${_image}jobu_company.svg';
   static const String jobuShadows = '${_image}jobu_shadows.svg';
   static const String purse = '${_image}purse.svg';
 }

@@ -20,7 +20,7 @@ class AppBottomNav extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
 
     if (location.startsWith('/chat')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/profile') || location.startsWith('/company/profile')) return 2;
     return 0;
   }
 

@@ -18,6 +18,8 @@ class AppHeader extends StatelessWidget {
   final String title;
   final VoidCallback? onMenuTap;
   final VoidCallback? onActionTap;
+  final VoidCallback? onBackTap;
+  final String? backFallbackRoute;
 
   // ===================================================
   // NOVO
@@ -29,6 +31,8 @@ class AppHeader extends StatelessWidget {
     required this.title,
     this.onMenuTap,
     this.onActionTap,
+    this.onBackTap,
+    this.backFallbackRoute,
     this.showBackButton = false,
   });
 
@@ -51,7 +55,17 @@ class AppHeader extends StatelessWidget {
           GestureDetector(
             onTap: () {
               if (showBackButton) {
-                Navigator.pop(context);
+                if (onBackTap != null) {
+                  onBackTap!.call();
+                  return;
+                }
+
+                if (context.canPop()) {
+                  context.pop();
+                  return;
+                }
+
+                context.go(backFallbackRoute ?? '/profile');
                 return;
               }
 

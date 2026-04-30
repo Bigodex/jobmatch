@@ -21,7 +21,7 @@ class AppColors {
   // Cores principais da identidade visual do app.
   // ===================================================
   static const Color primary = Color(0xFF68E3FF);
-  static const Color secondary = Color(0xFF7C5CFF);
+  static const Color secondary = Color(0xFF1A1A1A);
 
   // ===================================================
   // BACKGROUND COLORS

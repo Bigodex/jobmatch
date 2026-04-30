@@ -16,6 +16,8 @@ import 'package:go_router/go_router.dart';
 import 'package:jobmatch/core/constants/app_icons.dart';
 import 'package:jobmatch/core/constants/app_theme.dart';
 import 'package:jobmatch/features/auth/providers/auth_provider.dart';
+import 'package:jobmatch/features/company/providers/company_onboarding_provider.dart';
+import 'package:jobmatch/features/profile_company/providers/company_profile_provider.dart';
 import 'package:jobmatch/features/profile/providers/profile_provider.dart';
 import 'package:jobmatch/shared/widgets/app_header.dart';
 
@@ -28,6 +30,7 @@ class MenuScreen extends ConsumerStatefulWidget {
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
   bool _isLoggingOut = false;
+  bool _isOpeningCompanyPages = false;
 
   Future<void> _handleLogout() async {
     if (_isLoggingOut) return;
@@ -58,8 +61,42 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     }
   }
 
-  void _openCompanyOnboarding() {
-    context.push('/company/onboarding');
+  Future<void> _openCompanyPages() async {
+    if (_isOpeningCompanyPages) return;
+
+    setState(() {
+      _isOpeningCompanyPages = true;
+    });
+
+    try {
+      final pages = await ref
+          .read(companyProfileServiceProvider)
+          .getCompanyProfiles();
+
+      if (!mounted) return;
+
+      if (pages.isEmpty) {
+        ref.read(companyOnboardingProvider.notifier).reset();
+        context.go('/company/onboarding?from=menu');
+        return;
+      }
+
+      context.go('/company/pages');
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível carregar suas páginas empresariais.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOpeningCompanyPages = false;
+        });
+      }
+    }
   }
 
   @override
@@ -230,7 +267,19 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                         _MenuTile(
                           iconPath: AppIcons.briefcase,
                           title: 'Pagina Empresarial',
-                          onTap: _openCompanyOnboarding,
+                          trailing: _isOpeningCompanyPages
+                              ? SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                )
+                              : null,
+                          onTap: _isOpeningCompanyPages
+                              ? null
+                              : _openCompanyPages,
                         ),
                         const SizedBox(height: 12),
 

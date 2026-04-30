@@ -107,9 +107,63 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
     _descriptionController = TextEditingController();
     _salaryController = TextEditingController();
 
+    final persistedJobs = ref.read(companyOnboardingProvider).jobs;
+    _jobs.addAll(
+      persistedJobs.map(
+        (job) => {
+          'title': job.title,
+          'description': job.description,
+          'level': job.seniority,
+          'levelIcon': _iconForLevel(job.seniority),
+          'workMode': job.workModel,
+          'workModeIcon': _iconForWorkMode(job.workModel),
+          'uf': _extractUfFromLocation(job.location),
+          'city': _extractCityFromLocation(job.location),
+          'salary': job.salary,
+        },
+      ),
+    );
+
     Future.microtask(() async {
       await ref.read(companyOnboardingProvider.notifier).loadStates();
     });
+  }
+
+  String _iconForLevel(String value) {
+    final normalized = value.trim().toLowerCase();
+
+    for (final item in _levels) {
+      if (item.label.toLowerCase() == normalized) {
+        return item.icon;
+      }
+    }
+
+    return AppIcons.three;
+  }
+
+  String _iconForWorkMode(String value) {
+    final normalized = value.trim().toLowerCase();
+
+    for (final item in _workModes) {
+      if (item.label.toLowerCase() == normalized) {
+        return item.icon;
+      }
+    }
+
+    return AppIcons.model;
+  }
+
+  String _extractUfFromLocation(String location) {
+    final match = RegExp(r'\(([A-Z]{2})\)').firstMatch(location.trim());
+    return match?.group(1) ?? '';
+  }
+
+  String _extractCityFromLocation(String location) {
+    final value = location.trim();
+    if (value.isEmpty) return '';
+
+    final withoutCountry = value.replaceFirst(RegExp(r'^Brasil\s*-\s*'), '');
+    return withoutCountry.replaceAll(RegExp(r'\s*\([A-Z]{2}\)\s*$'), '').trim();
   }
 
   @override
@@ -264,7 +318,34 @@ class _StepCompanyJobsState extends ConsumerState<StepCompanyJobs> {
   }
 
   void _persistJobs() {
-    // ligar no provider/model depois
+    final drafts = _jobs.map((job) {
+      final title = (job['title'] ?? '').trim();
+      final description = (job['description'] ?? '').trim();
+      final seniority = (job['level'] ?? '').trim();
+      final workModel = (job['workMode'] ?? '').trim();
+      final salary = (job['salary'] ?? '').trim();
+      final city = (job['city'] ?? '').trim();
+      final uf = (job['uf'] ?? '').trim();
+
+      final location = city.isEmpty && uf.isEmpty
+          ? ''
+          : city.isEmpty
+              ? uf
+              : uf.isEmpty
+                  ? city
+                  : 'Brasil - $city ($uf)';
+
+      return CompanyJobDraft(
+        title: title,
+        seniority: seniority,
+        workModel: workModel,
+        location: location,
+        salary: salary,
+        description: description,
+      );
+    }).toList();
+
+    ref.read(companyOnboardingProvider.notifier).setJobs(drafts);
   }
 
   Future<void> _handleContinue() async {
@@ -1329,6 +1410,7 @@ class _LoadingDotsState extends State<_LoadingDots>
       duration: const Duration(milliseconds: 900),
     )..repeat();
   }
+
 
   @override
   void dispose() {

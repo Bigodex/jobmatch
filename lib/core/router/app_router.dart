@@ -42,6 +42,9 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/chat/screens/chat_screen.dart';
 import '../../features/chat/widgets/chat_open.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile_company/screens/company_profile_screen.dart';
+import '../../features/profile_company/screens/company_pages_screen.dart';
+import '../../features/profile_company/screens/edit_company_profile_screen.dart';
 
 // TELAS FULLSCREEN
 import '../../features/profile/screens/edit_resume_screen.dart';
@@ -108,7 +111,22 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/company/onboarding',
       name: 'company-onboarding',
-      builder: (context, state) => const CompanyOnboardingFlowScreen(),
+      builder: (context, state) {
+        final source = state.uri.queryParameters['from'];
+        final backFallbackRoute = source == 'company-pages'
+            ? '/company/pages'
+            : '/menu';
+
+        return CompanyOnboardingFlowScreen(
+          backFallbackRoute: backFallbackRoute,
+        );
+      },
+    ),
+
+    GoRoute(
+      path: '/company/pages',
+      name: 'company-pages',
+      builder: (context, state) => const CompanyPagesScreen(),
     ),
 
     // ==================================================
@@ -285,6 +303,36 @@ final GoRouter appRouter = GoRouter(
           path: '/profile',
           name: 'profile',
           builder: (context, state) => const ProfileScreen(),
+        ),
+
+        GoRoute(
+          path: '/company/profile',
+          name: 'company-profile',
+          builder: (context, state) => const CompanyProfileScreen(),
+        ),
+
+        GoRoute(
+          path: '/company/profile/edit',
+          name: 'company-profile-edit',
+          builder: (context, state) => const EditCompanyProfileScreen(),
+        ),
+
+        GoRoute(
+          path: '/company/profile/:companyId',
+          name: 'company-profile-detail',
+          builder: (context, state) {
+            final companyId = state.pathParameters['companyId']!;
+            return CompanyProfileScreen(companyId: companyId);
+          },
+        ),
+
+        GoRoute(
+          path: '/company/profile/:companyId/edit',
+          name: 'company-profile-detail-edit',
+          builder: (context, state) {
+            final companyId = state.pathParameters['companyId']!;
+            return EditCompanyProfileScreen(companyId: companyId);
+          },
         ),
       ],
     ),
